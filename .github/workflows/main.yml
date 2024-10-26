@@ -53,18 +53,20 @@ jobs:
           pod deintegrate
           cd ..
 
-      - name: Create temporary Flutter project and Rebuild iOS
+      - name: Recreate iOS project folder
         run: |
-          # Remove and recreate ios folder
+          # Recreate ios folder
           rm -rf ios
           flutter create --platforms ios --project-name my_ableaura_flutter .
           flutter pub get
-          
-          # Ensure Flutter.podspec is available and build iOS framework
-          mkdir -p ios/Flutter
+
+      - name: Build Flutter iOS Framework
+        run: |
+          # Build Flutter iOS frameworks
           flutter build ios-framework --xcframework --no-universal
-          
-          # Create symbolic link to Flutter framework
+
+          # Create symbolic links for Flutter frameworks
+          mkdir -p ios/Flutter
           mkdir -p ios/Flutter/Debug
           mkdir -p ios/Flutter/Release
           ln -sf ../../build/ios/framework/Debug/Flutter.xcframework ios/Flutter/Debug/Flutter.framework
@@ -72,7 +74,7 @@ jobs:
 
       - name: Update Podfile and Install CocoaPods
         run: |
-          # Update Podfile with correct iOS version and automatic code signing
+          # Update Podfile to include Flutter configuration
           cat << EOF > ios/Podfile
           platform :ios, '12.0'
 
