@@ -46,7 +46,7 @@ jobs:
         run: |
           # Remove existing iOS folder and recreate it
           rm -rf ios
-          flutter create --platforms ios .
+          flutter create --platforms ios --project-name my_ableaura_flutter .
           flutter pub get
           
           # Ensure Flutter.podspec is available
