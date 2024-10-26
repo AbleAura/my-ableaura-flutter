@@ -1,10 +1,146 @@
-- name: Update Podfile
+name: iOS Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_ios:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Debug project structure
         run: |
+          echo "Project root contents:"
+          ls -la
+          echo "\nProject structure:"
+          find . -print | sed -e 's;[^/]*/;|____;g;s;____|; |;g'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.4'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup environment
+        run: |
+          echo "Flutter version:"
+          flutter --version
+          echo "\nDart version:"
+          dart --version
+          echo "\nFull environment check:"
+          flutter doctor -v
+          echo "\nXcode version:"
+          xcodebuild -version
+
+      - name: Create environment files
+        env:
+          DEV_ENV: ${{ secrets.DEV_ENV_FILE }}
+          PROD_ENV: ${{ secrets.PROD_ENV_FILE }}
+        run: |
+          echo "Creating environment files..."
+          mkdir -p assets
+          echo "$DEV_ENV" > assets/.env.dev
+          echo "$PROD_ENV" > assets/.env.prod
+          echo "\nEnvironment files created:"
+          ls -la assets/
+
+      - name: Install Flutter dependencies
+        run: |
+          echo "Cleaning Flutter project..."
+          flutter clean
+          echo "\nInstalling dependencies..."
+          flutter pub get
+          echo "\nDependencies installed successfully"
+
+      - name: Regenerate iOS project
+        run: |
+          echo "Original pubspec.yaml contents (excluding sensitive data):"
+          grep -v "key:" pubspec.yaml || true
+          
+          echo "\nCreating temporary pubspec..."
+          cat > pubspec.temp.yaml << EOL
+          name: my_ableaura_flutter
+          description: A new Flutter project.
+          publish_to: 'none'
+          version: 1.0.0+1
+
+          environment:
+            sdk: '>=3.5.3 <4.0.0'
+            flutter: '>=3.24.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.2
+            shared_preferences: ^2.0.8
+            http: ^0.13.3
+            firebase_core: ^2.24.2
+            firebase_messaging: ^14.7.9
+            flutter_local_notifications: ^16.3.0
+            geolocator: ^10.1.0
+            permission_handler: ^11.1.0
+            razorpay_flutter: ^1.3.0
+            fluttertoast: ^8.0.9
+            url_launcher: ^6.1.2
+            provider: ^6.0.1
+            flutter_dotenv: ^5.0.2
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^2.0.0
+
+          flutter:
+            uses-material-design: true
+            assets:
+              - assets/
+              - assets/.env.dev
+              - assets/.env.prod
+          EOL
+          
+          echo "Backing up original pubspec..."
+          cp pubspec.yaml pubspec.backup
+          
+          echo "Using temporary pubspec..."
+          cp pubspec.temp.yaml pubspec.yaml
+          
+          echo "\nRemoving existing iOS directory..."
+          rm -rf ios
+          
+          echo "\nCreating new iOS project..."
+          flutter create --platforms=ios .
+          
+          echo "\nRestoring original pubspec..."
+          mv pubspec.backup pubspec.yaml
+          rm pubspec.temp.yaml
+          
+          echo "\nNewly created iOS project structure:"
+          ls -la ios/
+          
+          echo "\nRunning flutter pub get..."
+          flutter pub get
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Update Podfile
+        run: |
+          echo "Creating Podfile..."
           cd ios
           cat > Podfile << EOL
           platform :ios, '12.0'
 
-          # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
           project 'Runner', {
@@ -33,17 +169,14 @@
           target 'Runner' do
             use_frameworks!
             use_modular_headers!
-
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
           end
 
           post_install do |installer|
             installer.pods_project.targets.each do |target|
               flutter_additional_ios_build_settings(target)
-              
               target.build_configurations.each do |config|
                 config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
-                # Add any needed permissions descriptions
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
                   '$(inherited)',
                   'PERMISSION_LOCATION=1',
@@ -55,10 +188,21 @@
             end
           end
           EOL
+          echo "Podfile created successfully"
+          cd ..
+
+      - name: Clean Pods
+        run: |
+          echo "Cleaning CocoaPods..."
+          cd ios
+          rm -rf Pods
+          rm -rf Podfile.lock
+          pod cache clean --all
           cd ..
 
       - name: Install CocoaPods
         run: |
+          echo "Installing CocoaPods..."
           gem install cocoapods
           cd ios
           pod install --repo-update
@@ -69,22 +213,23 @@
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
         run: |
+          echo "Configuring Xcode project..."
           cd ios
           
-          # Update project settings
           xcodeproj="Runner.xcodeproj/project.pbxproj"
           
-          # Create backup
+          echo "Creating backup..."
           cp "$xcodeproj" "${xcodeproj}.backup"
           
-          # Update build settings
+          echo "Updating build settings..."
           /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 12.0" "$xcodeproj" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "$xcodeproj" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "$xcodeproj" 2>/dev/null || true
           
-          # Update minimum iOS version in AppFrameworkInfo.plist
+          echo "Updating AppFrameworkInfo.plist..."
           plutil -replace MinimumOSVersion -string "12.0" Flutter/AppFrameworkInfo.plist
           
+          echo "Configuration completed"
           cd ..
 
       - name: Import signing certificate
@@ -93,13 +238,19 @@
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          echo "Setting up certificate..."
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           
+          echo "Decoding certificate..."
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
+          
+          echo "Creating keychain..."
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          echo "Importing certificate..."
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
@@ -107,17 +258,21 @@
         env:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
         run: |
+          echo "Installing provisioning profile..."
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "Provisioning profile installed"
 
       - name: Build iOS
         env:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
         run: |
+          echo "Building iOS app..."
           flutter build ios --release --no-codesign
+          echo "Build completed"
 
       - name: Archive and export IPA
         env:
@@ -125,11 +280,11 @@
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
         run: |
-          # Create export options plist
+          echo "Creating export options plist..."
           EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist
           echo "$EXPORT_OPTIONS_PLIST_BASE64" | base64 --decode > $EXPORT_OPTIONS_PATH
           
-          # Archive
+          echo "Archiving application..."
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
@@ -139,175 +294,13 @@
             PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID \
             archive
           
-          # Export
+          echo "Exporting IPA..."
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/Runner.xcarchive \
             -exportOptionsPlist $EXPORT_OPTIONS_PATH \
             -exportPath $RUNNER_TEMP/build
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v3
-        with:
-          name: release-ipa
-          path: ${{ runner.temp }}/build/*.ipa
-          retention-days: 5
-
-      - name: Upload Build Logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-logs
-          path: |
-            ios/build/
-            build/ios/
-            ${{ runner.temp }}/Runner.xcarchive/
-          retention-days: 5
-- name: Update Podfile
-        run: |
-          cd ios
-          cat > Podfile << EOL
-          platform :ios, '12.0'
-
-          # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
-          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-
-          project 'Runner', {
-            'Debug' => :debug,
-            'Profile' => :release,
-            'Release' => :release,
-          }
-
-          def flutter_root
-            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-            unless File.exist?(generated_xcode_build_settings_path)
-              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-            end
-
-            File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/FLUTTER_ROOT\=(.*)/)
-              return matches[1].strip if matches
-            end
-            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
-          end
-
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-
-          flutter_ios_podfile_setup
-
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-
-            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          end
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target)
-              
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
-                # Add any needed permissions descriptions
-                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-                  '$(inherited)',
-                  'PERMISSION_LOCATION=1',
-                  'PERMISSION_NOTIFICATIONS=1',
-                  'PERMISSION_CAMERA=1',
-                  'PERMISSION_PHOTOS=1'
-                ]
-              end
-            end
-          end
-          EOL
-          cd ..
-
-      - name: Install CocoaPods
-        run: |
-          gem install cocoapods
-          cd ios
-          pod install --repo-update
-          cd ..
-
-      - name: Configure Xcode project
-        env:
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-          BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
-        run: |
-          cd ios
           
-          # Update project settings
-          xcodeproj="Runner.xcodeproj/project.pbxproj"
-          
-          # Create backup
-          cp "$xcodeproj" "${xcodeproj}.backup"
-          
-          # Update build settings
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 12.0" "$xcodeproj" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "$xcodeproj" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "$xcodeproj" 2>/dev/null || true
-          
-          # Update minimum iOS version in AppFrameworkInfo.plist
-          plutil -replace MinimumOSVersion -string "12.0" Flutter/AppFrameworkInfo.plist
-          
-          cd ..
-
-      - name: Import signing certificate
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-      - name: Install provisioning profile
-        env:
-          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
-        run: |
-          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build iOS
-        env:
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-          BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
-        run: |
-          flutter build ios --release --no-codesign
-
-      - name: Archive and export IPA
-        env:
-          EXPORT_OPTIONS_PLIST_BASE64: ${{ secrets.EXPORT_OPTIONS_PLIST_BASE64 }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-          BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
-        run: |
-          # Create export options plist
-          EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist
-          echo "$EXPORT_OPTIONS_PLIST_BASE64" | base64 --decode > $EXPORT_OPTIONS_PATH
-          
-          # Archive
-          xcodebuild -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath $RUNNER_TEMP/Runner.xcarchive \
-            -sdk iphoneos \
-            DEVELOPMENT_TEAM=$TEAM_ID \
-            PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID \
-            archive
-          
-          # Export
-          xcodebuild -exportArchive \
-            -archivePath $RUNNER_TEMP/Runner.xcarchive \
-            -exportOptionsPlist $EXPORT_OPTIONS_PATH \
-            -exportPath $RUNNER_TEMP/build
+          echo "Archive and export completed"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v3
