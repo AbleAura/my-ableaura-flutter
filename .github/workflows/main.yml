@@ -39,6 +39,8 @@ jobs:
           flutter doctor -v
           echo "\nXcode version:"
           xcodebuild -version
+          echo "\nCocoaPods version:"
+          pod --version
 
       - name: Create environment files
         env:
@@ -98,7 +100,7 @@ jobs:
           ruby-version: '3.0'
           bundler-cache: true
 
-    - name: Update Podfile
+      - name: Update Podfile
         run: |
           echo "Creating Podfile..."
           cd ios
@@ -135,11 +137,12 @@ jobs:
             use_modular_headers!
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-            # Firebase dependencies
+            # Firebase dependencies with fixed versions
             pod 'Firebase/Core'
             pod 'Firebase/Messaging'
             pod 'FirebaseMessaging', '~> 10.25.0'
-            pod 'GoogleDataTransport', '~> 9.3.0'  # Updated version
+            pod 'GoogleDataTransport', '~> 9.3.0'
+            pod 'nanopb', '~> 2.30909.0'
           end
 
           post_install do |installer|
@@ -168,8 +171,8 @@ jobs:
                 config.build_settings['SWIFT_VERSION'] = '5.0'
                 config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
                 
-                # Fix for GoogleDataTransport
-                if target.name.start_with?('GoogleDataTransport', 'FirebaseMessaging', 'Firebase')
+                # Fix for Firebase and GoogleDataTransport
+                if ['GoogleDataTransport', 'FirebaseMessaging', 'FirebaseCore', 'FirebaseInstallations', 'GoogleUtilities'].include?(target.name)
                   config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
                   config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
                   config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_ENABLE_MALLOC=1'
@@ -180,6 +183,7 @@ jobs:
             end
           end
           EOL
+          echo "Podfile created successfully"
           cd ..
 
       - name: Clean Pods
@@ -191,6 +195,7 @@ jobs:
           pod cache clean --all
           pod deintegrate
           pod repo update
+          echo "CocoaPods cleaned successfully"
           cd ..
 
       - name: Install CocoaPods
@@ -199,6 +204,7 @@ jobs:
           gem install cocoapods
           cd ios
           pod install --repo-update
+          echo "CocoaPods installation completed"
           cd ..
 
       - name: Configure Xcode project
@@ -221,6 +227,7 @@ jobs:
           echo "Updating AppFrameworkInfo.plist..."
           plutil -replace MinimumOSVersion -string "12.0" Flutter/AppFrameworkInfo.plist
           
+          echo "Project configuration completed"
           cd ..
 
       - name: Import signing certificate
@@ -244,6 +251,8 @@ jobs:
           echo "Importing certificate..."
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          echo "Certificate setup completed"
 
       - name: Install provisioning profile
         env:
@@ -254,7 +263,7 @@ jobs:
           echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-          echo "Provisioning profile installed"
+          echo "Provisioning profile installed successfully"
 
       - name: Build iOS
         env:
@@ -292,6 +301,8 @@ jobs:
             -archivePath $RUNNER_TEMP/Runner.xcarchive \
             -exportOptionsPlist $EXPORT_OPTIONS_PATH \
             -exportPath $RUNNER_TEMP/build
+          
+          echo "Archive and export completed"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v3
