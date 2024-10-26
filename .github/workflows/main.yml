@@ -94,22 +94,22 @@ jobs:
             use_modular_headers!
           
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-            
-            post_install do |installer|
-              installer.pods_project.targets.each do |target|
-                flutter_additional_ios_build_settings(target)
-                target.build_configurations.each do |config|
-                  config.build_settings['ENABLE_BITCODE'] = 'NO'
-                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
-                  
-                  # Preprocessor definitions for permissions
-                  config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-                    '$(inherited)',
-                    'PERMISSION_CAMERA=1',
-                    'PERMISSION_PHOTOS=1',
-                    'PERMISSION_LOCATION=1'
-                  ]
-                end
+          end
+
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              flutter_additional_ios_build_settings(target)
+              target.build_configurations.each do |config|
+                config.build_settings['ENABLE_BITCODE'] = 'NO'
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+                
+                # Preprocessor definitions for permissions
+                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+                  '$(inherited)',
+                  'PERMISSION_CAMERA=1',
+                  'PERMISSION_PHOTOS=1',
+                  'PERMISSION_LOCATION=1'
+                ]
               end
             end
           end
@@ -122,12 +122,11 @@ jobs:
           rm -rf Podfile.lock
           pod cache clean --all
           pod deintegrate
-          pod repo update
           cd ..
 
       - name: Install CocoaPods
         run: |
-          gem install cocoapods
+          sudo gem install cocoapods
           cd ios
           pod install --repo-update
           cd ..
@@ -159,7 +158,14 @@ jobs:
           PP_PATH=$RUNNER_TEMP/profile.mobileprovision
           echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+
+          echo "Provisioning Profile UUID: $UUID"
+          echo "Provisioning Profile Name: $NAME"
+
+          echo "PROVISIONING_PROFILE_SPECIFIER=$NAME" >> $GITHUB_ENV
 
       - name: Import signing certificate
         env:
@@ -175,12 +181,21 @@ jobs:
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          # Add the keychain to the search list
+          security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
+          # Set the keychain as default
+          security default-keychain -s $KEYCHAIN_PATH
+          # Unlock the keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
       - name: Build iOS
         env:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
+          PROVISIONING_PROFILE_SPECIFIER: ${{ env.PROVISIONING_PROFILE_SPECIFIER }}
+          KEYCHAIN_PATH: ${{ env.KEYCHAIN_PATH }}
         run: |
           flutter build ios --release --no-codesign
           cd ios
@@ -191,7 +206,8 @@ jobs:
             clean archive \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER"
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
 
       - name: Archive and export IPA
         env:
@@ -203,8 +219,7 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath $RUNNER_TEMP/Runner.xcarchive \
             -exportOptionsPlist $EXPORT_OPTIONS_PATH \
-            -exportPath $RUNNER_TEMP/build \
-            -allowProvisioningUpdates
+            -exportPath $RUNNER_TEMP/build
 
       - name: Upload IPA
         uses: actions/upload-artifact@v3
