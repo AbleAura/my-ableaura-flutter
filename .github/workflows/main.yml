@@ -22,18 +22,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup Xcode and Tools
+      - name: Setup tools
         run: |
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          xcrun simctl list
-          echo "Installing CocoaPods..."
           sudo gem install cocoapods -v 1.15.2
-
-      - name: Setup environment
-        run: |
-          flutter --version
-          flutter doctor -v
-          flutter precache --ios
 
       - name: Create environment files
         env:
@@ -44,127 +36,56 @@ jobs:
           echo "$DEV_ENV" > assets/.env.dev
           echo "$PROD_ENV" > assets/.env.prod
 
-      - name: Clean project
+      - name: Setup iOS project
         run: |
-          rm -rf ios/Pods
-          rm -rf ios/Podfile.lock
-          rm -rf ios/.symlinks
-          rm -rf ios/Flutter/Flutter.podspec
-          rm -rf ~/Library/Developer/Xcode/DerivedData
-          flutter clean
-
-      - name: Create temporary Flutter project
-        run: |
-          # First, save current pubspec.yaml
-          cp pubspec.yaml pubspec.yaml.bak
+          # Save current directory contents
+          mkdir -p temp_backup
+          cp -r * temp_backup/ 2>/dev/null || true
           
-          # Create temporary pubspec with valid name
-          cat > pubspec.yaml << 'EOL'
-          name: my_ableaura_flutter
-          description: "A new Flutter project."
-          publish_to: 'none'
-
-          version: 1.0.0+1
-
-          environment:
-            sdk: ">=3.5.3 <4.0.0"
-            flutter: ">=3.24.4 <4.0.0"
-
-          dependencies:
-            flutter:
-              sdk: flutter
-          EOL
+          # Clean directory but keep backup
+          find . -maxdepth 1 ! -name 'temp_backup' ! -name '.' ! -name '.git' -exec rm -rf {} +
           
-          # Remove and recreate iOS project
-          rm -rf ios
-          flutter create --platforms=ios .
+          # Create new Flutter project with correct name
+          flutter create --project-name my_ableaura_flutter .
           
-          # Restore original pubspec
-          mv pubspec.yaml.bak pubspec.yaml
-
-      - name: Update Flutter dependencies
-        run: |
-          cat >> pubspec.yaml << 'EOL'
-          dependencies:
-            flutter:
-              sdk: flutter
-            firebase_core: ^2.24.2
-            firebase_auth: ^4.15.3
-            firebase_messaging: ^14.7.10
-            flutter_local_notifications: ^16.3.0
-            geolocator: ^10.1.0
-            http: ^1.1.0
-            provider: ^6.1.1
-            razorpay_flutter: ^1.3.5
-            shared_preferences: ^2.2.2
-            url_launcher: ^6.2.2
-            permission_handler: ^11.1.0
-            flutter_dotenv: ^5.1.0
-
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.1
-
-          flutter:
-            uses-material-design: true
-            assets:
-              - assets/
-              - assets/.env.dev
-              - assets/.env.prod
-          EOL
-
+          # Restore original files but keep new iOS directory
+          cp -r temp_backup/lib . 2>/dev/null || true
+          cp -r temp_backup/assets . 2>/dev/null || true
+          cp temp_backup/pubspec.yaml . 2>/dev/null || true
+          rm -rf temp_backup
+          
+          # Get dependencies
           flutter pub get
-          flutter pub upgrade --major-versions
 
       - name: Update Podfile
         run: |
           cat > ios/Podfile << 'EOL'
           platform :ios, '13.0'
-
-          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-
-          flutter_ios_podfile_setup
-
+          
+          install! 'cocoapods', :deterministic_uuids => false
+          
           target 'Runner' do
             use_frameworks!
             use_modular_headers!
             
-            platform :ios, '13.0'
-            
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-            pod 'FirebaseCore'
-            pod 'FirebaseAuth'
-            pod 'FirebaseMessaging'
+            
+            pod 'Firebase/Core'
+            pod 'Firebase/Auth'
+            pod 'Firebase/Messaging'
             pod 'GoogleDataTransport'
           end
-
+          
           post_install do |installer|
             installer.pods_project.targets.each do |target|
               flutter_additional_ios_build_settings(target)
-              
               target.build_configurations.each do |config|
                 config.build_settings['ENABLE_BITCODE'] = 'NO'
                 config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
                 
-                # Required build flags
-                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
-                  '$(inherited)',
-                  'COCOAPODS=1',
-                  'PB_FIELD_32BIT=1',
-                  'PB_NO_PACKED_STRUCTS=1',
-                  'PB_ENABLE_MALLOC=1',
-                ]
-                
-                # Architecture settings
-                config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
-                
-                # Disable strict prototypes warning for Firebase
-                if ['FirebaseAuth', 'FirebaseCore', 'FirebaseMessaging', 'GoogleDataTransport'].include?(target.name)
-                  config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
+                # Fix for Firebase
+                if ['Firebase', 'FirebaseCore', 'FirebaseAuth', 'FirebaseMessaging', 'GoogleDataTransport'].include?(target.name)
+                  config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
                 end
               end
             end
@@ -174,26 +95,20 @@ jobs:
       - name: Install Pods
         run: |
           cd ios
-          pod repo update
-          pod install --repo-update
+          rm -rf Pods Podfile.lock
+          pod install
           cd ..
 
-      - name: Update iOS deployment target
-        run: |
-          cd ios
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 13.0" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
-          plutil -replace MinimumOSVersion -string "13.0" Flutter/AppFrameworkInfo.plist
-          cd ..
-
-      - name: Configure Xcode project
+      - name: Update project settings
         env:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
         run: |
           cd ios
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 13.0" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:CODE_SIGN_STYLE Manual" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          plutil -replace MinimumOSVersion -string "13.0" Flutter/AppFrameworkInfo.plist
           cd ..
 
       - name: Import signing certificate
