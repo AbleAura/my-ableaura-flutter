@@ -98,7 +98,7 @@ jobs:
           ruby-version: '3.0'
           bundler-cache: true
 
-      - name: Update Podfile
+    - name: Update Podfile
         run: |
           echo "Creating Podfile..."
           cd ios
@@ -135,8 +135,11 @@ jobs:
             use_modular_headers!
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-            # Fix for GoogleDataTransport
-            pod 'GoogleDataTransport', '~> 9.2.5'
+            # Firebase dependencies
+            pod 'Firebase/Core'
+            pod 'Firebase/Messaging'
+            pod 'FirebaseMessaging', '~> 10.25.0'
+            pod 'GoogleDataTransport', '~> 9.3.0'  # Updated version
           end
 
           post_install do |installer|
@@ -155,13 +158,23 @@ jobs:
                   'PERMISSION_LOCATION=1',
                   'PERMISSION_NOTIFICATIONS=1',
                   'PERMISSION_CAMERA=1',
-                  'PERMISSION_PHOTOS=1'
+                  'PERMISSION_PHOTOS=1',
+                  'PB_FIELD_32BIT=1',
+                  'PB_NO_PACKED_STRUCTS=1',
+                  'PB_ENABLE_MALLOC=1'
                 ]
                 
+                # Fix for Xcode 15
+                config.build_settings['SWIFT_VERSION'] = '5.0'
+                config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
+                
                 # Fix for GoogleDataTransport
-                if target.name.start_with?('GoogleDataTransport')
+                if target.name.start_with?('GoogleDataTransport', 'FirebaseMessaging', 'Firebase')
+                  config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
                   config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
                   config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_ENABLE_MALLOC=1'
+                  config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_FIELD_32BIT=1'
+                  config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_NO_PACKED_STRUCTS=1'
                 end
               end
             end
@@ -177,6 +190,7 @@ jobs:
           rm -rf Podfile.lock
           pod cache clean --all
           pod deintegrate
+          pod repo update
           cd ..
 
       - name: Install CocoaPods
