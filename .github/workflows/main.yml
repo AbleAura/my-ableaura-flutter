@@ -45,11 +45,31 @@ jobs:
 
       - name: Regenerate iOS project
         run: |
+          # Backup pubspec.yaml
+          cp pubspec.yaml pubspec.yaml.backup
+          
+          # Get the current package name
+          PACKAGE_NAME=$(grep "name:" pubspec.yaml | awk '{print $2}')
+          echo "Current package name: $PACKAGE_NAME"
+          
+          # Remove iOS directory
           rm -rf ios
+          
+          # Create temporary pubspec with valid name
+          sed 's/name: .*/name: my_ableaura_flutter/' pubspec.yaml > pubspec.yaml.temp
+          mv pubspec.yaml.temp pubspec.yaml
+          
+          # Create iOS project
           flutter create --platforms=ios .
+          
+          # Restore original pubspec.yaml
+          mv pubspec.yaml.backup pubspec.yaml
           
           echo "Newly created iOS project structure:"
           ls -la ios/
+          
+          # Run flutter pub get again to ensure everything is in sync
+          flutter pub get
 
       - name: Update Podfile
         run: |
@@ -96,6 +116,11 @@ jobs:
               
               target.build_configurations.each do |config|
                 config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+                
+                # Disable code signing for pods
+                config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+                config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+                config.build_settings['CODE_SIGNING_IDENTITY'] = ''
               end
             end
           end
@@ -119,15 +144,18 @@ jobs:
           # Update project settings
           xcodeproj="Runner.xcodeproj/project.pbxproj"
           
-          # Backup original file
+          # Create backup
           cp "$xcodeproj" "${xcodeproj}.backup"
           
-          # Update deployment target, team ID, and bundle ID
-          plutil -replace "objects.*.buildSettings.IPHONEOS_DEPLOYMENT_TARGET" -string "12.0" "$xcodeproj" || true
-          plutil -replace "objects.*.buildSettings.DEVELOPMENT_TEAM" -string "$TEAM_ID" "$xcodeproj" || true
-          plutil -replace "objects.*.buildSettings.PRODUCT_BUNDLE_IDENTIFIER" -string "$BUNDLE_ID" "$xcodeproj" || true
+          # Update project settings using plutil
+          plutil -replace objects -json "$(plutil -extract objects json1 "$xcodeproj" -o -)" "$xcodeproj"
           
-          # Verify file is still valid
+          # Update all relevant build settings
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 12.0" "$xcodeproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "$xcodeproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "$xcodeproj" 2>/dev/null || true
+          
+          # Verify project file is still valid
           if ! plutil -lint "$xcodeproj"; then
             echo "Project file validation failed, restoring backup"
             mv "${xcodeproj}.backup" "$xcodeproj"
@@ -151,6 +179,7 @@ jobs:
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           
+          # Import certificate
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
