@@ -25,9 +25,7 @@ jobs:
       - name: Setup environment
         run: |
           flutter --version
-          dart --version
           flutter doctor -v
-          xcodebuild -version
 
       - name: Create environment files
         env:
@@ -54,12 +52,6 @@ jobs:
           rm -rf temp_project
           flutter pub get
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.0'
-          bundler-cache: true
-
       - name: Update Podfile
         run: |
           cd ios
@@ -68,10 +60,9 @@ jobs:
 
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-          # Define Firebase version
-          $FirebaseSDKVersion = '10.25.0'
-          $GoogleDataTransportVersion = '9.3.0'
-          $FirebaseMessagingVersion = '10.25.0'
+          FIREBASE_SDK_VERSION = '10.25.0'
+          GOOGLE_DATATRANSPORT_VERSION = '9.3.0'
+          FIREBASE_MESSAGING_VERSION = '10.25.0'
 
           project 'Runner', {
             'Debug' => :debug,
@@ -101,16 +92,15 @@ jobs:
             use_modular_headers!
             flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-            # Firebase dependencies with explicit versions
-            pod 'Firebase/Core', $FirebaseSDKVersion
-            pod 'Firebase/Messaging', $FirebaseSDKVersion
-            pod 'FirebaseAnalytics', $FirebaseSDKVersion
-            pod 'FirebaseMessaging', $FirebaseMessagingVersion
-            pod 'GoogleDataTransport', $GoogleDataTransportVersion
+            pod 'Firebase/Core', FIREBASE_SDK_VERSION
+            pod 'Firebase/Messaging', FIREBASE_SDK_VERSION
+            pod 'FirebaseAnalytics', FIREBASE_SDK_VERSION
+            pod 'FirebaseMessaging', FIREBASE_MESSAGING_VERSION
+            pod 'GoogleDataTransport', GOOGLE_DATATRANSPORT_VERSION
             pod 'nanopb', '~> 2.30909.0'
             pod 'GoogleUtilities', '~> 7.12.0'
-            pod 'FirebaseCore', $FirebaseSDKVersion
-            pod 'FirebaseInstallations', $FirebaseSDKVersion
+            pod 'FirebaseCore', FIREBASE_SDK_VERSION
+            pod 'FirebaseInstallations', FIREBASE_SDK_VERSION
           end
 
           post_install do |installer|
@@ -123,7 +113,6 @@ jobs:
                 config.build_settings['SWIFT_VERSION'] = '5.0'
                 config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
                 
-                # Global preprocessor definitions
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PERMISSION_LOCATION=1'
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PERMISSION_NOTIFICATIONS=1'
@@ -132,7 +121,7 @@ jobs:
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_FIELD_32BIT=1'
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_NO_PACKED_STRUCTS=1'
                 config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PB_ENABLE_MALLOC=1'
-                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << "Firebase_VERSION=\${$FirebaseSDKVersion}"
+                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << "Firebase_VERSION=#{FIREBASE_SDK_VERSION.gsub('.', '_')}"
 
                 if ['GoogleDataTransport', 'nanopb', 'FirebaseMessaging', 'FirebaseCore', 'FirebaseInstallations', 'GoogleUtilities'].include?(target.name)
                   config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
@@ -166,12 +155,9 @@ jobs:
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
         run: |
           cd ios
-          xcodeproj="Runner.xcodeproj/project.pbxproj"
-          
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 12.0" "$xcodeproj" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "$xcodeproj" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "$xcodeproj" 2>/dev/null || true
-          
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:IPHONEOS_DEPLOYMENT_TARGET 12.0" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
           plutil -replace MinimumOSVersion -string "12.0" Flutter/AppFrameworkInfo.plist
           cd ..
 
@@ -183,7 +169,6 @@ jobs:
         run: |
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
@@ -204,7 +189,8 @@ jobs:
         env:
           TEAM_ID: ${{ secrets.TEAM_ID }}
           BUNDLE_ID: ${{ secrets.BUNDLE_ID }}
-        run: flutter build ios --release --no-codesign
+        run: |
+          flutter build ios --release --no-codesign
 
       - name: Archive and export IPA
         env:
