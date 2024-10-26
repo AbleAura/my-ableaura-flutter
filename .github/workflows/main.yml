@@ -1,0 +1,42 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_ios:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.4'  # Updated to match your required version
+          channel: 'stable'
+          cache: true
+      
+      # Add this step to explicitly set Dart SDK version
+      - name: Set Dart SDK version
+        run: |
+          flutter --version
+          dart --version
+          flutter upgrade
+          flutter pub global activate dart_sdk_version_manager
+          dart pub global run dart_sdk_version_manager 3.5.3  # Set to your required version
+
+      - name: Install Flutter dependencies
+        run: |
+          flutter pub get
