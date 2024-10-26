@@ -24,19 +24,16 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.4'  # Updated to match your required version
+          flutter-version: '3.24.4'  # This version includes Dart 3.5.4
           channel: 'stable'
           cache: true
-      
-      # Add this step to explicitly set Dart SDK version
-      - name: Set Dart SDK version
+
+      - name: Check versions
         run: |
           flutter --version
           dart --version
-          flutter upgrade
-          flutter pub global activate dart_sdk_version_manager
-          dart pub global run dart_sdk_version_manager 3.5.3  # Set to your required version
 
       - name: Install Flutter dependencies
         run: |
+          flutter clean
           flutter pub get
