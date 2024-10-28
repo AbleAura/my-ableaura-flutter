@@ -19,6 +19,15 @@ workflows:
         BUILD_CERTIFICATE_BASE64: $BUILD_CERTIFICATE_BASE64
         PROVISIONING_PROFILE_BASE64: $PROVISIONING_PROFILE_BASE64
         EXPORT_OPTIONS_PLIST_BASE64: $EXPORT_OPTIONS_PLIST_BASE64
+      code-signing:
+        ios:
+          provisioning_profiles:
+            - name: ParentsAppProfile
+              path: $CM_PROVISIONING_PROFILE_PATH
+          certificate:
+            path: $CM_CERTIFICATE_PATH
+            password: $P12_PASSWORD
+            keychain_name: build.keychain
     scripts:
       - name: Create environment files
         script: |
@@ -99,11 +108,12 @@ workflows:
 
       - name: Setup Keychain and Provisioning Profile
         script: |
+          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -lut 21600 build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
 
-          # Import certificate
+          # Import certificate to keychain
           echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
           security import certificate.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
           security list-keychains -s build.keychain
@@ -167,14 +177,3 @@ workflows:
         - ~/.pub-cache
         - ios/Pods
         - build
-
-    code_signing:
-      provisioning_profiles:
-        ParentsAppProfile:
-          # The provisioning profile can be uploaded via the Codemagic UI and referenced here
-          path: $CM_PROVISIONING_PROFILE_PATH
-      certificate:
-        # The certificate can also be uploaded via the Codemagic UI and referenced here
-        path: $CM_CERTIFICATE_PATH
-        password: $P12_PASSWORD
-        keychain: build.keychain
