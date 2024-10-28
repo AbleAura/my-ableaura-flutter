@@ -1,0 +1,180 @@
+# codemagic.yaml
+version: 1.0
+
+workflows:
+  ios-build:
+    name: iOS Build
+    environment:
+      flutter: "3.24.4"
+      xcode: "15.2"
+      cocoapods: "1.15.2"
+      ruby: "3.2.2"
+      vars:
+        DEV_ENV: $DEV_ENV
+        PROD_ENV: $PROD_ENV
+        TEAM_ID: $TEAM_ID
+        BUNDLE_ID: $BUNDLE_ID
+        P12_PASSWORD: $P12_PASSWORD
+        KEYCHAIN_PASSWORD: $KEYCHAIN_PASSWORD
+        BUILD_CERTIFICATE_BASE64: $BUILD_CERTIFICATE_BASE64
+        PROVISIONING_PROFILE_BASE64: $PROVISIONING_PROFILE_BASE64
+        EXPORT_OPTIONS_PLIST_BASE64: $EXPORT_OPTIONS_PLIST_BASE64
+    scripts:
+      - name: Create environment files
+        script: |
+          mkdir -p assets
+          echo "$DEV_ENV" > assets/.env.dev
+          echo "$PROD_ENV" > assets/.env.prod
+
+      - name: Flutter Setup and Dependencies
+        script: |
+          flutter clean
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/Library/Caches/CocoaPods
+          flutter precache --ios
+          flutter pub get
+          flutter pub run build_runner build --delete-conflicting-outputs || true
+          flutter build ios-framework --no-debug --no-profile --release --cocoapods
+          cd ios
+          xcodebuild clean -workspace Runner.xcworkspace -scheme Runner
+          rm -rf Pods Podfile.lock
+          rm -rf .symlinks/plugins/*
+
+      - name: Update Podfile
+        script: |
+          cd ios
+          cat > Podfile <<EOF
+          platform :ios, '12.0'
+
+          # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+          project 'Runner', {
+            'Debug' => :debug,
+            'Profile' => :release,
+            'Release' => :release,
+          }
+
+          def flutter_root
+            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+            unless File.exist?(generated_xcode_build_settings_path)
+              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+            end
+
+            File.foreach(generated_xcode_build_settings_path) do |line|
+              matches = line.match(/FLUTTER_ROOT\=(.*)/)
+              return matches[1].strip if matches
+            end
+            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}"
+          end
+
+          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+          flutter_ios_podfile_setup
+
+          target 'Runner' do
+            use_frameworks!
+            use_modular_headers!
+
+            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+          end
+
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              flutter_additional_ios_build_settings(target)
+              target.build_configurations.each do |config|
+                config.build_settings['ENABLE_BITCODE'] = 'NO'
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+                config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+                config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
+              end
+            end
+          end
+          EOF
+
+      - name: Install Pods
+        script: |
+          cd ios
+          pod install --repo-update --verbose
+
+      - name: Setup Keychain and Provisioning Profile
+        script: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+
+          # Import certificate
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k build.keychain
+          security list-keychains -s build.keychain
+
+          # Install provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+
+      - name: Update Xcode Project Configuration
+        script: |
+          cd ios
+          echo "ENABLE_BITCODE=NO" >> Flutter/Flutter-Generated.xcconfig
+          echo "EXCLUDED_ARCHS[sdk=iphonesimulator*]=arm64" >> Flutter/Flutter-Generated.xcconfig
+
+          plutil -replace ProvisioningStyle -string Manual Runner.xcodeproj/project.pbxproj
+
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:DEVELOPMENT_TEAM $TEAM_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PRODUCT_BUNDLE_IDENTIFIER $BUNDLE_ID" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:CODE_SIGN_STYLE Manual" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:PROVISIONING_PROFILE_SPECIFIER ParentsAppProfile" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :objects:*:buildSettings:CODE_SIGN_IDENTITY 'iPhone Distribution'" "Runner.xcodeproj/project.pbxproj" 2>/dev/null || true
+
+      - name: Build iOS
+        script: |
+          flutter config --enable-ios
+          flutter build ios --release --no-codesign
+
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath $CM_BUILD_DIR/Runner.xcarchive \
+            -sdk iphoneos \
+            -allowProvisioningUpdates \
+            clean archive \
+            CODE_SIGN_STYLE="Manual" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="ParentsAppProfile" \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            ONLY_ACTIVE_ARCH=NO \
+            FLUTTER_BUILD_MODE=release
+
+      - name: Export IPA
+        script: |
+          echo "$EXPORT_OPTIONS_PLIST_BASE64" | base64 --decode > ExportOptions.plist
+
+          xcodebuild -exportArchive \
+            -archivePath $CM_BUILD_DIR/Runner.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $CM_BUILD_DIR/build \
+            PROVISIONING_PROFILE_SPECIFIER="ParentsAppProfile"
+
+    artifacts:
+      - $CM_BUILD_DIR/build/*.ipa
+      - $CM_BUILD_DIR/Runner.xcarchive
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ios/Pods
+        - build
+
+    code_signing:
+      provisioning_profiles:
+        ParentsAppProfile:
+          # The provisioning profile can be uploaded via the Codemagic UI and referenced here
+          path: $CM_PROVISIONING_PROFILE_PATH
+      certificate:
+        # The certificate can also be uploaded via the Codemagic UI and referenced here
+        path: $CM_CERTIFICATE_PATH
+        password: $P12_PASSWORD
+        keychain: build.keychain
