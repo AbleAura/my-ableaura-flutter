@@ -10,7 +10,7 @@ on:
 jobs:
   build_ios:
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -25,7 +25,6 @@ jobs:
       - name: Setup Xcode and Tools
         run: |
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          xcrun simctl list
           echo "Installing CocoaPods..."
           sudo gem install cocoapods -v 1.15.2
 
@@ -44,50 +43,84 @@ jobs:
           echo "$DEV_ENV" > assets/.env.dev
           echo "$PROD_ENV" > assets/.env.prod
 
-      - name: Clean project
+      - name: Clean project and CocoaPods
         run: |
-          rm -rf ios/Pods
-          rm -rf ios/Podfile.lock
-          rm -rf ios/.symlinks
-          rm -rf ios/Flutter/Flutter.podspec
-          rm -rf ~/Library/Developer/Xcode/DerivedData
           flutter clean
+          cd ios
+          rm -rf Pods
+          rm -rf Podfile.lock
+          pod cache clean --all
+          pod deintegrate
+          cd ..
 
-      - name: Create temporary Flutter project
+      - name: Recreate iOS project folder
         run: |
-          # First, save current pubspec.yaml
-          cp pubspec.yaml pubspec.yaml.bak
-          
-          # Create temporary pubspec with valid name
-          cat > pubspec.yaml << 'EOL'
-          name: my_ableaura_flutter
-          description: "A new Flutter project."
-          publish_to: 'none'
-
-          version: 1.0.0+1
-
-          environment:
-            sdk: ">=3.5.3 <4.0.0"
-            flutter: ">=3.24.4 <4.0.0"
-
-          dependencies:
-            flutter:
-              sdk: flutter
-          EOL
-          
-          # Remove and recreate ios folder
+          # Recreate ios folder
           rm -rf ios
           flutter create --platforms ios --project-name my_ableaura_flutter .
-          
-          # Restore original pubspec.yaml
-          mv pubspec.yaml.bak pubspec.yaml
-
-      - name: Install dependencies
-        run: |
           flutter pub get
 
-      - name: Install CocoaPods
+      - name: Build Flutter iOS Framework
         run: |
+          # Build Flutter iOS frameworks
+          flutter build ios-framework --xcframework --no-universal
+
+          # Create symbolic links for Flutter frameworks
+          mkdir -p ios/Flutter
+          mkdir -p ios/Flutter/Debug
+          mkdir -p ios/Flutter/Release
+          ln -sf ../../build/ios/framework/Debug/Flutter.xcframework ios/Flutter/Debug/Flutter.framework
+          ln -sf ../../build/ios/framework/Release/Flutter.xcframework ios/Flutter/Release/Flutter.framework
+
+      - name: Update Podfile and Install CocoaPods
+        run: |
+          # Update Podfile to include Flutter configuration
+          cat << EOF > ios/Podfile
+          platform :ios, '12.0'
+
+          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+          project 'Runner', 'Release' => :release, 'Profile' => :release, 'Debug' => :debug
+
+          def flutter_root
+            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+            unless File.exist?(generated_xcode_build_settings_path)
+              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+            end
+
+            File.foreach(generated_xcode_build_settings_path) do |line|
+              matches = line.match(/FLUTTER_ROOT\=(.*)/)
+              return matches[1].strip if matches
+            end
+            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}"
+          end
+
+          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+          flutter_ios_podfile_setup
+
+          target 'Runner' do
+            platform :ios, '12.0'
+
+            use_frameworks!
+            use_modular_headers!
+
+            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
+            post_install do |installer|
+              installer.pods_project.targets.each do |target|
+                target.build_configurations.each do |config|
+                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+                  config.build_settings['CODE_SIGN_STYLE'] = 'Automatic'
+                  config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= '$(inherited)'
+                  config.build_settings['FRAMEWORK_SEARCH_PATHS'] << ' $(FLUTTER_ROOT)/bin/cache/artifacts/engine/ios'
+                end
+              end
+            end
+          end
+          EOF
+
+          # Install CocoaPods
           cd ios
           pod install --repo-update
           cd ..
