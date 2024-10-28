@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/models/enrollment.dart';
-import 'package:my_ableaura/services/student_service.dart';
+import '/models/enrollment.dart';
+import '/services/student_service.dart';
 import 'session_selection_screen.dart';
 
 class EnrollmentListScreen extends StatefulWidget {

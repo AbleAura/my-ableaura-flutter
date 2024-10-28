@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/models/child.dart';
-import 'package:my_ableaura/screens/payment_screen.dart';
+import '/models/child.dart';
+import '/screens/payment_screen.dart';
 import '../services/student_service.dart';
 
 class PaymentSelectionScreen extends StatefulWidget {

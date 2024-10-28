@@ -1,6 +1,6 @@
 // home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/widgets/full_screen_menu.dart';
+import '/widgets/full_screen_menu.dart';
 import 'children_list_screen.dart';
 import 'whatsapp_channels_screen.dart';
 import 'payment_selection_screen.dart';

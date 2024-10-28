@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/models/child.dart';
+import '/models/child.dart';
 import '/services/student_service.dart';
 import 'enrollment_list_screen.dart';
 

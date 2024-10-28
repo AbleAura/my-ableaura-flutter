@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/services/student_service.dart';
+import '/services/student_service.dart';
 
 class MarkAttendanceScreen extends StatefulWidget {
   final int studentId;

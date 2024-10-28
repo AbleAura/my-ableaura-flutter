@@ -1,7 +1,7 @@
 // notifications_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/models/notification.dart';
+import '/models/notification.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../services/notification_service.dart';
 
