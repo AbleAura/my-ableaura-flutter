@@ -1,4 +1,5 @@
 // student_service.dart
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -10,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/session.dart';
 import '../models/child.dart';
 import '../models/enrollment.dart';
+import '../models/progress_models.dart';
 
 class AttendanceResponse {
   final bool success;
@@ -41,6 +43,32 @@ class AttendanceResponse {
   }
 }
 
+class ProgressSummary {
+  final double overallProgress;
+  final String aiAnalysis;
+  final List<String> keyImprovements;
+  final List<String> areasForFocus;
+  final List<String> recommendations;
+
+  ProgressSummary({
+    required this.overallProgress,
+    required this.aiAnalysis,
+    required this.keyImprovements,
+    required this.areasForFocus,
+    required this.recommendations,
+  });
+
+  factory ProgressSummary.fromJson(Map<String, dynamic> json) {
+    return ProgressSummary(
+      overallProgress: json['overall_progress'].toDouble(),
+      aiAnalysis: json['ai_analysis'],
+      keyImprovements: List<String>.from(json['key_improvements']),
+      areasForFocus: List<String>.from(json['areas_for_focus']),
+      recommendations: List<String>.from(json['recommendations']),
+    );
+  }
+}
+
 class StudentService {
   static String get baseUrl => BuildConfig.instance.baseUrl;
 
@@ -49,37 +77,6 @@ class StudentService {
     return prefs.getString('access_token');
   }
 
-  // All the existing API methods remain the same...
-
-  // Update the logout method to accept navigatorKey
-// In student_service.dart, update the logout method:
-
-static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navigatorKey) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-
-    // Use navigatorKey for navigation
-    if (context.mounted) {
-      navigatorKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => LoginScreen(navigatorKey: navigatorKey)
-        ),
-        (Route<dynamic> route) => false,
-      );
-    }
-  } catch (e) {
-    print('Logout error: $e');
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error logging out. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}
   // Get list of children
   static Future<List<Child>> getChildrenList() async {
     try {
@@ -93,7 +90,7 @@ static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navig
         },
       );
 
-      print('Children Response: ${response.body}'); // For debugging
+      print('Children Response: ${response.body}');
 
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
@@ -103,7 +100,7 @@ static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navig
         throw Exception(data['message'] ?? 'Failed to fetch children list');
       }
     } catch (e) {
-      print('Error fetching children: $e'); // For debugging
+      print('Error fetching children: $e');
       throw Exception('Failed to fetch children list: $e');
     }
   }
@@ -172,36 +169,6 @@ static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navig
     }
   }
 
-  // Get pending payments
-  static Future<List<Payment>> getPendingPayments(int enrollmentId) async {
-    try {
-      final token = await _getAuthToken();
-      if (token == null) throw Exception('Authentication token not found');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/payments/get'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'enrollment_id': enrollmentId,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-      if (data['success'] == true) {
-        final List<dynamic> paymentsData = data['data'];
-        return paymentsData.map((payment) => Payment.fromJson(payment)).toList();
-      } else {
-        throw Exception(data['message'] ?? 'Failed to fetch payments');
-      }
-    } catch (e) {
-      print('Error fetching payments: $e');
-      throw Exception('Failed to fetch payments: $e');
-    }
-  }
-
   // Mark attendance
   static Future<AttendanceResponse> markAttendance({
     required int sessionId,
@@ -240,7 +207,7 @@ static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navig
     }
   }
 
-  // Get current location helper method
+  // Get current location
   static Future<Position> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -260,5 +227,163 @@ static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navig
     }
 
     return await Geolocator.getCurrentPosition();
+  }
+
+  // Get pending payments
+  static Future<List<Payment>> getPendingPayments(int enrollmentId) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) throw Exception('Authentication token not found');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/payments/get'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'enrollment_id': enrollmentId,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final List<dynamic> paymentsData = data['data'];
+        return paymentsData.map((payment) => Payment.fromJson(payment)).toList();
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch payments');
+      }
+    } catch (e) {
+      print('Error fetching payments: $e');
+      throw Exception('Failed to fetch payments: $e');
+    }
+  }
+
+  // Get monthly progress
+  static Future<List<DailyProgress>> getMonthlyProgress(
+    int childId,
+    DateTime month,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) throw Exception('Authentication token not found');
+
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl/student/progress/$childId/monthly'
+          '?year=${month.year}&month=${month.month}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final List<dynamic> progressData = data['data'];
+        return progressData
+            .map((progress) => DailyProgress.fromJson(progress))
+            .toList();
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch monthly progress');
+      }
+    } catch (e) {
+      print('Error fetching monthly progress: $e');
+      throw Exception('Failed to fetch monthly progress: $e');
+    }
+  }
+
+  // Get progress summary
+  static Future<ProgressSummary> getProgressSummary(int childId) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) throw Exception('Authentication token not found');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/student/progress/$childId/summary'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        return ProgressSummary.fromJson(data['data']);
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch progress summary');
+      }
+    } catch (e) {
+      print('Error fetching progress summary: $e');
+      throw Exception('Failed to fetch progress summary: $e');
+    }
+  }
+
+  // Get skill progress
+  static Future<List<DailyProgress>> getSkillProgress(
+    int childId,
+    String skillName, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) throw Exception('Authentication token not found');
+
+      final queryParameters = {
+        'skill_name': skillName,
+        if (startDate != null) 'start_date': startDate.toIso8601String(),
+        if (endDate != null) 'end_date': endDate.toIso8601String(),
+      };
+
+      final uri = Uri.parse('$baseUrl/student/progress/$childId/skill')
+          .replace(queryParameters: queryParameters);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final List<dynamic> progressData = data['data'];
+        return progressData
+            .map((progress) => DailyProgress.fromJson(progress))
+            .toList();
+      } else {
+        throw Exception(data['message'] ?? 'Failed to fetch skill progress');
+      }
+    } catch (e) {
+      print('Error fetching skill progress: $e');
+      throw Exception('Failed to fetch skill progress: $e');
+    }
+  }
+
+  // Logout
+  static Future<void> logout(BuildContext context, GlobalKey<NavigatorState> navigatorKey) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      if (context.mounted) {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(navigatorKey: navigatorKey)
+          ),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      print('Logout error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error logging out. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

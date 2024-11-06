@@ -1,18 +1,23 @@
+// enrollment_list_screen.dart
+
 import 'package:flutter/material.dart';
-import '/models/enrollment.dart';
-import '/services/student_service.dart';
+import 'package:my_ableaura/models/enrollment.dart';
+import 'package:my_ableaura/services/student_service.dart';
 import 'session_selection_screen.dart';
 
 class EnrollmentListScreen extends StatefulWidget {
   final int childId;
   final String childName;
   final String uniqueId;
+  final GlobalKey<NavigatorState> navigatorKey;  // Add this
 
-  EnrollmentListScreen({
+  const EnrollmentListScreen({
+    Key? key,
     required this.childId,
     required this.childName,
     required this.uniqueId,
-  });
+    required this.navigatorKey,  // Add this
+  }) : super(key: key);
 
   @override
   _EnrollmentListScreenState createState() => _EnrollmentListScreenState();
@@ -100,14 +105,15 @@ class _EnrollmentListScreenState extends State<EnrollmentListScreen> {
                   ),
                   trailing: Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    print('Navigating with franchiseId: ${enrollment.franchiseId}'); // Debug print
+                    print('Navigating with franchiseId: ${enrollment.franchiseId}');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => SessionSelectionScreen(
                           childId: widget.childId,
                           childName: widget.childName,
-                          franchiseId: enrollment.franchiseId, // Make sure this is being passed
+                          franchiseId: enrollment.franchiseId,
+                          navigatorKey: widget.navigatorKey,  // Pass navigatorKey
                         ),
                       ),
                     );

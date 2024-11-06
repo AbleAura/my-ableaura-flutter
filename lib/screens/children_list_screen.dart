@@ -1,17 +1,20 @@
+// children_list_screen.dart
+
 import 'package:flutter/material.dart';
-import '/models/child.dart';
+import 'package:my_ableaura/models/child.dart';
 import '/services/student_service.dart';
 import 'enrollment_list_screen.dart';
 
 class ChildrenListScreen extends StatefulWidget {
-      final GlobalKey<NavigatorState> navigatorKey;
+  final GlobalKey<NavigatorState> navigatorKey;
+  final Function(int childId, String childName)? onChildSelected; // Add this parameter
 
-  // Remove const from constructor
   const ChildrenListScreen({
     Key? key,
     required this.navigatorKey,
+    this.onChildSelected, // Add this parameter
   }) : super(key: key);
-  
+
   @override
   _ChildrenListScreenState createState() => _ChildrenListScreenState();
 }
@@ -99,16 +102,22 @@ class _ChildrenListScreenState extends State<ChildrenListScreen> {
                   subtitle: Text(child.uniqueId),
                   trailing: Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EnrollmentListScreen(
-                          childId: child.childId,
-                          childName: child.name,
-                          uniqueId: child.uniqueId,
+                    // Handle both progress panel and regular navigation
+                    if (widget.onChildSelected != null) {
+                      widget.onChildSelected!(child.childId, child.name);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EnrollmentListScreen(
+                            childId: child.childId,
+                            childName: child.name,
+                            uniqueId: child.uniqueId,
+                            navigatorKey: widget.navigatorKey,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                 ),
               );

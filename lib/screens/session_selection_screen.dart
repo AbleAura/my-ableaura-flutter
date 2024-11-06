@@ -7,12 +7,15 @@ class SessionSelectionScreen extends StatefulWidget {
   final int childId;
   final String childName;
   final int franchiseId;
+  final GlobalKey<NavigatorState> navigatorKey;  // Add this
 
-  const SessionSelectionScreen({super.key, 
+  const SessionSelectionScreen({
+     Key? key,
     required this.childId,
     required this.childName,
     required this.franchiseId,
-  });
+     required this.navigatorKey,  // Add this
+  }): super(key: key);
 
   @override
   _SessionSelectionScreenState createState() => _SessionSelectionScreenState();
@@ -136,15 +139,16 @@ class _SessionSelectionScreenState extends State<SessionSelectionScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => MarkAttendanceScreen(
-                                studentId: widget.childId,
-                                sessionId: session.sessionId,
-                                enrollmentId: session.enrollmentId,  // Added this
-                                date: DateTime.now().toString().split(' ')[0],
-                                childName: widget.childName,
-                                sessionName: session.sessionName,
-                              ),
-                            ),
+    builder: (context) => MarkAttendanceScreen(
+      studentId: widget.childId,
+      sessionId: session.sessionId,
+      enrollmentId: session.enrollmentId,
+      childName: widget.childName,
+      sessionName: session.sessionName,
+      navigatorKey: widget.navigatorKey,  // Pass the navigatorKey
+      date: DateTime.now().toString().split(' ')[0],
+    ),
+  ),
                           );
                         },
                       ),

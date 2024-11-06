@@ -7,6 +7,7 @@ class MarkAttendanceScreen extends StatefulWidget {
   final int enrollmentId;
   final String childName;
   final String sessionName;
+    final GlobalKey<NavigatorState> navigatorKey;  // Add this
 
   const MarkAttendanceScreen({
     Key? key,
@@ -14,7 +15,9 @@ class MarkAttendanceScreen extends StatefulWidget {
     required this.sessionId,
     required this.enrollmentId,
     required this.childName,
-    required this.sessionName, required String date,
+    required this.sessionName, 
+       required this.navigatorKey,  // Add this
+    required String date,
   }) : super(key: key);
 
   @override
