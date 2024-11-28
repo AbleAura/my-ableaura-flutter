@@ -8,6 +8,7 @@ enum BuildFlavor {
 class BuildConfig {
   final BuildFlavor flavor;
   final String baseUrl;
+    final String appUrl;  // Added appUrl
   final String razorpayKey;
 
   static late BuildConfig _instance;
@@ -15,6 +16,7 @@ class BuildConfig {
   BuildConfig._internal({
     required this.flavor,
     required this.baseUrl,
+       required this.appUrl,  // Added appUrl
     required this.razorpayKey,
   });
 
@@ -29,12 +31,14 @@ class BuildConfig {
       _instance = BuildConfig._internal(
         flavor: flavor,
         baseUrl: Environment.apiBaseUrl,
+          appUrl: Environment.appUrl,  // Added appUrl
         razorpayKey: Environment.razorpayKey,
       );
       
       // Verify initialization
       print('BuildConfig initialized successfully');
       print('Base URL: ${_instance.baseUrl}');
+       print('App URL: ${_instance.appUrl}');  // Added debug print
       print('Flavor: ${_instance.flavor}');
       
     } catch (e, stackTrace) {
@@ -45,6 +49,7 @@ class BuildConfig {
       _instance = BuildConfig._internal(
         flavor: flavor,
         baseUrl: Environment.DEFAULT_API_URL,
+          appUrl: Environment.DEFAULT_APP_URL,  // Added default app URL
         razorpayKey: Environment.DEFAULT_RAZORPAY_KEY,
       );
       

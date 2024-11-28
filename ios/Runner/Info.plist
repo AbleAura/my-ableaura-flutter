@@ -33,6 +33,8 @@
     <key>UIMainStoryboardFile</key>
     <string>Main</string>
     <key>UISupportedInterfaceOrientations</key>
+    <key>NSMicrophoneUsageDescription</key>
+<string>We need access to your microphone to record voice notes for feedback</string>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>

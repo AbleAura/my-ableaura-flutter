@@ -46,24 +46,6 @@ class ProgressCard extends StatelessWidget {
                 LevelBox(label: 'Performance', level: progress.performanceLevel),
               ],
             ),
-            if (progress.notes.isNotEmpty) ...[
-              SizedBox(height: 12),
-              Text(
-                'Notes:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                progress.notes,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ],
           ],
         ),
       ),

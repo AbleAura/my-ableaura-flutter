@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import '/widgets/full_screen_menu.dart';
 import 'children_list_screen.dart';
+import 'feedback/feedback_menu_screen.dart';
+import 'payments/payments_menu_screen.dart';
+import 'referral_screen.dart';
 import 'whatsapp_channels_screen.dart';
-import 'payment_selection_screen.dart';
 import 'notifications_screen.dart';
 import 'progress/progress_view.dart'; // Add this import
 
@@ -69,27 +71,44 @@ class HomeScreen extends StatelessWidget {
         color: Colors.orange,
         subtitle: 'Refer friends and earn',
         onTap: () {
-          print('Navigating to Referrals');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Coming soon!')),
-          );
-        },
-      ),
-      MenuItem(
-        title: 'My Payments',
-        icon: Icons.payment_outlined,
-        color: Colors.purple,
-        subtitle: 'View and pay fees',
-        onTap: () {
-          print('Navigating to Payments Selection');
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => PaymentSelectionScreen(navigatorKey: navigatorKey),
+              builder: (context) => ReferralScreen(navigatorKey: navigatorKey),
             ),
           );
         },
       ),
+    MenuItem(
+  title: 'My Payments',
+  icon: Icons.payment_outlined,
+  color: Colors.purple,
+  subtitle: 'View and pay fees',
+  onTap: () {
+    print('Navigating to Payments Selection');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChildrenListScreen(
+          navigatorKey: navigatorKey,
+          onChildSelected: (childId, childName) {
+            // After child is selected, navigate to PaymentsMenuScreen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PaymentsMenuScreen(
+                  studentId: childId,
+                  studentName: childName,
+                  navigatorKey: navigatorKey,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  },
+),
       MenuItem(
         title: 'Progress Panel',
         icon: Icons.trending_up,
@@ -130,6 +149,22 @@ class HomeScreen extends StatelessWidget {
           );
         },
       ),
+      MenuItem(
+  title: 'Feedback',
+  icon: Icons.feedback_outlined,
+  color: Colors.purple,
+  subtitle: 'Share your thoughts with us',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FeedbackMenuScreen(
+          navigatorKey: navigatorKey,
+        ),
+      ),
+    );
+  },
+),
     ];
   }
 

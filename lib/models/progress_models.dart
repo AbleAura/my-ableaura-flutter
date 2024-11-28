@@ -1,3 +1,5 @@
+// progress_models.dart
+
 class DailyProgress {
   final DateTime date;
   final String skillName;
@@ -5,7 +7,7 @@ class DailyProgress {
   final String supportLevel;
   final String instructionLevel;
   final String performanceLevel;
-  final String notes;
+  final DateTime evaluationTime;
 
   DailyProgress({
     required this.date,
@@ -14,7 +16,7 @@ class DailyProgress {
     required this.supportLevel,
     required this.instructionLevel,
     required this.performanceLevel,
-    this.notes = '',
+    required this.evaluationTime,
   });
 
   factory DailyProgress.fromJson(Map<String, dynamic> json) {
@@ -22,11 +24,24 @@ class DailyProgress {
       date: DateTime.parse(json['date']),
       skillName: json['skill_name'],
       subSkillName: json['sub_skill_name'],
-      supportLevel: json['support_level'],
-      instructionLevel: json['instruction_level'],
-      performanceLevel: json['performance_level'],
-      notes: json['notes'] ?? '',
+      supportLevel: _convertLevelToString(json['support_level']),
+      instructionLevel: _convertLevelToString(json['instruction_level']),
+      performanceLevel: _convertLevelToString(json['performance_level']),
+      evaluationTime: DateTime.parse(json['evaluation_time']),
     );
+  }
+
+  static String _convertLevelToString(String level) {
+    switch (level) {
+      case '1':
+        return 'low';
+      case '5':
+        return 'medium';
+      case '10':
+        return 'high';
+      default:
+        return 'low';
+    }
   }
 
   int getLevelValue(String level) {
@@ -34,11 +49,11 @@ class DailyProgress {
       case 'low':
         return 1;
       case 'medium':
-        return 2;
+        return 5;
       case 'high':
-        return 3;
+        return 10;
       default:
-        return 0;
+        return 1;
     }
   }
 }

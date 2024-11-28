@@ -77,8 +77,16 @@ class StudentService {
     return prefs.getString('access_token');
   }
 
+    static String _fixS3Url(String url) {
+    // Remove extra slashes but preserve http:// or https://
+    final fixedUrl = url.replaceAll(RegExp(r'(?<!:)//'), '/');
+    print('Original URL: $url');
+    print('Fixed URL: $fixedUrl');
+    return fixedUrl;
+  }
+
   // Get list of children
-  static Future<List<Child>> getChildrenList() async {
+ static Future<ChildResponse> getChildrenList() async {
     try {
       final token = await _getAuthToken();
       if (token == null) throw Exception('Authentication token not found');
@@ -94,8 +102,8 @@ class StudentService {
 
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
-        final List<dynamic> childrenData = data['data'];
-        return childrenData.map((child) => Child.fromJson(child)).toList();
+        // Parse the response using the updated model
+        return ChildResponse.fromJson(data);
       } else {
         throw Exception(data['message'] ?? 'Failed to fetch children list');
       }
@@ -104,6 +112,41 @@ class StudentService {
       throw Exception('Failed to fetch children list: $e');
     }
   }
+static Future<String?> getStudentQRCode(int studentId) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/student/get/qrcode'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+      }),
+    );
+
+    print('QR Code Response: ${response.body}'); // Debug print
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      final qrUrl = data['qr_code_pic'] as String;
+      
+      // Fix double slash in URL
+      final fixedUrl = qrUrl.replaceAll(RegExp(r'(?<!:)//'), '/');
+      print('Fixed QR URL: $fixedUrl'); // Debug print
+      
+      return fixedUrl;
+    } else {
+      throw Exception(data['message'] ?? 'Failed to get QR code');
+    }
+  } catch (e) {
+    print('Error getting QR code: $e');
+    throw Exception('Failed to get QR code: $e');
+  }
+}
 
   // Get child enrollments
   static Future<List<Enrollment>> getChildEnrollments(int childId) async {
@@ -228,9 +271,35 @@ class StudentService {
 
     return await Geolocator.getCurrentPosition();
   }
+static Future<Map<String, dynamic>> getCombinedPaymentOrder(int studentId) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
 
+    final response = await http.post(
+      Uri.parse('$baseUrl/student/get/pending/payments/combine/order'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      return data;
+    } else {
+      throw Exception(data['message'] ?? 'Failed to create combined payment order');
+    }
+  } catch (e) {
+    print('Error creating combined payment order: $e');
+    throw Exception('Failed to create combined payment order: $e');
+  }
+}
   // Get pending payments
-  static Future<List<Payment>> getPendingPayments(int enrollmentId) async {
+ static Future<List<Payment>> getPendingPayments(int studentId) async {
     try {
       final token = await _getAuthToken();
       if (token == null) throw Exception('Authentication token not found');
@@ -242,56 +311,78 @@ class StudentService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'enrollment_id': enrollmentId,
+          'student_id': studentId,
         }),
       );
 
+      print('Payments Response: ${response.body}'); // Debug print
+
       final data = jsonDecode(response.body);
-      if (data['success'] == true) {
+      if (data == null) {
+        throw Exception('Invalid response data');
+      }
+
+      if (data['success'] == true && data['data'] != null) {
         final List<dynamic> paymentsData = data['data'];
-        return paymentsData.map((payment) => Payment.fromJson(payment)).toList();
+        return paymentsData.map((payment) {
+          if (payment == null) {
+            throw Exception('Invalid payment data');
+          }
+          try {
+            return Payment.fromJson(payment as Map<String, dynamic>);
+          } catch (e) {
+            print('Error parsing payment: $e');
+            throw Exception('Error parsing payment data: $e');
+          }
+        }).toList();
       } else {
-        throw Exception(data['message'] ?? 'Failed to fetch payments');
+        String errorMessage = data['message'] ?? 'Failed to fetch payments';
+        print('API Error: $errorMessage');  // Debug print
+        throw Exception(errorMessage);
       }
     } catch (e) {
-      print('Error fetching payments: $e');
+      print('Error in getPendingPayments: $e'); // Debug print
       throw Exception('Failed to fetch payments: $e');
     }
   }
 
+
   // Get monthly progress
   static Future<List<DailyProgress>> getMonthlyProgress(
-    int childId,
-    DateTime month,
-  ) async {
-    try {
-      final token = await _getAuthToken();
-      if (token == null) throw Exception('Authentication token not found');
+  int studentId,
+  DateTime month,
+) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
 
-      final response = await http.get(
-        Uri.parse(
-          '$baseUrl/student/progress/$childId/monthly'
-          '?year=${month.year}&month=${month.month}',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
+    final response = await http.post(
+      Uri.parse('$baseUrl/student/progress/monthly'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+        'month': month.month,
+        'year': month.year,
+      }),
+    );
 
-      final data = jsonDecode(response.body);
-      if (data['success'] == true) {
-        final List<dynamic> progressData = data['data'];
-        return progressData
-            .map((progress) => DailyProgress.fromJson(progress))
-            .toList();
-      } else {
-        throw Exception(data['message'] ?? 'Failed to fetch monthly progress');
-      }
-    } catch (e) {
-      print('Error fetching monthly progress: $e');
-      throw Exception('Failed to fetch monthly progress: $e');
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      final List<dynamic> progressData = data['data'];
+      return progressData
+          .map((progress) => DailyProgress.fromJson(progress))
+          .toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch monthly progress');
     }
+  } catch (e) {
+    print('Error fetching monthly progress: $e');
+    throw Exception('Failed to fetch monthly progress: $e');
   }
+}
 
   // Get progress summary
   static Future<ProgressSummary> getProgressSummary(int childId) async {

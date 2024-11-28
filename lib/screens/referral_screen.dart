@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
+import '../services/referral_service.dart';
+import '../models/referral_detail.dart';
 
 class ReferralScreen extends StatefulWidget {
-   final GlobalKey<NavigatorState> navigatorKey;
+  final GlobalKey<NavigatorState> navigatorKey;
 
   const ReferralScreen({
     Key? key,
@@ -14,225 +17,196 @@ class ReferralScreen extends StatefulWidget {
   _ReferralScreenState createState() => _ReferralScreenState();
 }
 
-class _ReferralScreenState extends State<ReferralScreen> {
-  List<Contact> _contacts = [];
-  List<Contact> _filteredContacts = [];
+class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _isLoading = false;
-  final TextEditingController _searchController = TextEditingController();
+  String? _referralCode;
+  Map<String, dynamic>? _stats;
 
   @override
   void initState() {
     super.initState();
-    _loadContacts();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadData();
   }
 
-  Future<void> _loadContacts() async {
-    if (_isLoading) return;
-
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
-
     try {
-      if (await FlutterContacts.requestPermission()) {
-        final contacts = await FlutterContacts.getContacts(
-          withProperties: true,
-          withPhoto: false,
-        );
+      final response = await ReferralService.generateCode();
+      final statsResponse = await ReferralService.getReferralStats();
+      
+      if (mounted) {
         setState(() {
-          _contacts = contacts;
-          _filteredContacts = contacts;
+          _referralCode = response['referral_code'];
+          _stats = statsResponse['data'];
+          _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading contacts: $e');
-    } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 
-  void _filterContacts(String query) {
-    if (query.isEmpty) {
-      setState(() => _filteredContacts = _contacts);
-    } else {
-      setState(() {
-        _filteredContacts = _contacts.where((contact) {
-          final name = contact.displayName.toLowerCase();
-          final searchLower = query.toLowerCase();
-          return name.contains(searchLower);
-        }).toList();
-      });
+  Future<void> _shareReferralCode() async {
+    if (_referralCode == null) return;
+
+     // Use the new method to get the referral URL
+  final referralUrl = ReferralService.getReferralUrl(_referralCode!);
+
+    final String shareText = '''
+Join Sports Academy and get exclusive benefits! 🏃‍♂️
+
+Use my referral code: $_referralCode
+
+- Get your child trained by expert coaches
+- Professional sports training programs
+- Safe and secure environment
+
+Click here to join: $referralUrl
+''';
+
+
+    try {
+      await Share.share(shareText);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sharing: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2E0052),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        title: const Text('Refer & Earn'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.black,
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF303030),
+          tabs: const [
+            Tab(text: 'Share & Earn'),
+            Tab(text: 'My Referrals'),
+          ],
         ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Reward Information Section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _buildShareTab(),
+          _buildMyReferralsTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShareTab() {
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildRewardsCard(),
+              const SizedBox(height: 24),
+              _buildReferralCodeCard(),
+              const SizedBox(height: 24),
+              _buildShareButton(),
+              if (_stats != null) ...[
+                const SizedBox(height: 24),
+                _buildStatsGrid(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardsCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.black, Color(0xFF303030)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.card_giftcard,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 const Text(
-                  'Refer friends & Earn ₹2500!',
+                  'Refer & Get Free Sessions',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildRewardPoint(
-                  'You get ₹150 cashback when a friend places their first order using referral coupon.',
-                ),
-                _buildRewardPoint(
-                  'Friend gets flat ₹90 off + free delivery on their first order',
-                ),
-                _buildRewardPoint(
-                  'You get ₹2500 cashback for the first fifty successful referrals',
-                ),
               ],
             ),
-          ),
-
-          // Main Content Section
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Share section
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Get rewards by inviting your\nfriends to join Sports Academy',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.share),
-                          label: const Text('Share link in a group'),
-                          onPressed: _shareReferralLink,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.orange,
-                            side: const BorderSide(color: Colors.orange),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Search Box
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Find your friends',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                      ),
-                      onChanged: _filterContacts,
-                    ),
-                  ),
-
-                  // Contacts List
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredContacts.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == _filteredContacts.length) {
-                                return _buildFAQSection();
-                              }
-
-                              final contact = _filteredContacts[index];
-                              final phone = contact.phones.isNotEmpty 
-                                  ? contact.phones.first.number 
-                                  : '';
-
-                              return Column(
-                                children: [
-                                  ListTile(
-                                    title: Text(
-                                      contact.displayName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    subtitle: Text(phone),
-                                    trailing: TextButton(
-                                      child: const Text(
-                                        'Invite',
-                                        style: TextStyle(
-                                          color: Colors.orange,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      onPressed: () => _inviteContact(phone),
-                                    ),
-                                  ),
-                                  const Divider(height: 1),
-                                ],
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            _buildRewardPoint('Get 1 free session for each referral'),
+            _buildRewardPoint('No limit on referrals'),
+            _buildRewardPoint('Free session after child completes 1 month'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRewardPoint(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
             Icons.check_circle_outline,
             color: Colors.white70,
-            size: 24,
+            size: 20,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
-                color: Colors.white70,
+                color: Colors.white,
                 fontSize: 14,
               ),
             ),
@@ -242,91 +216,315 @@ class _ReferralScreenState extends State<ReferralScreen> {
     );
   }
 
-  Widget _buildFAQSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text(
-            'FAQ',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+  Widget _buildReferralCodeCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your Referral Code',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-        ),
-        _buildFAQItem(
-          'How can I refer a friend?',
-          'Share your referral link with friends and family.',
-        ),
-        _buildFAQItem(
-          'What is a successful referral?',
-          'A referral would be considered successful only after your friend joins Sports Academy using the referral code.',
-        ),
-        _buildFAQItem(
-          'How much cashback can I earn?',
-          'You can earn up to ₹2500 cashback by successfully referring friends. You get ₹150 for each successful referral.',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFAQItem(String question, String answer) {
-    return ExpansionTile(
-      title: Text(
-        question,
-        style: const TextStyle(
-          fontWeight: FontWeight.w500,
-          fontSize: 16,
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () {
+                if (_referralCode != null) {
+                  Clipboard.setData(ClipboardData(text: _referralCode!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Code copied!')),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      _isLoading ? 'Loading...' : (_referralCode ?? 'Error'),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.copy, color: Colors.grey[600]),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildShareButton() {
+    return ElevatedButton.icon(
+      onPressed: _shareReferralCode,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF303030),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: const Icon(Icons.share),
+      label: const Text(
+        'Share with Friends',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.5,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(answer),
+        _buildStatCard(
+          'Total Referrals',
+          _stats!['total_referrals'].toString(),
+          Icons.people_outline,
+          Colors.blue,
+        ),
+        _buildStatCard(
+          'Completed',
+          _stats!['completed_referrals'].toString(),
+          Icons.check_circle_outline,
+          Colors.green,
+        ),
+        _buildStatCard(
+          'Pending',
+          _stats!['pending_referrals'].toString(),
+          Icons.pending_outlined,
+          Colors.orange,
+        ),
+        _buildStatCard(
+          'Sessions Earned',
+          _stats!['sessions_earned'].toString(),
+          Icons.star_outline,
+          Colors.purple,
         ),
       ],
     );
   }
 
-  Future<void> _shareReferralLink() async {
-    const String referralCode = "YOUR_REFERRAL_CODE"; // Get from your backend
-    const String message = '''
-Join Sports Academy with my referral code!
-
-Use code: $referralCode to get ₹90 off + free delivery on your first order.
-
-Download now: [App Link]
-    ''';
-
-    try {
-      await Share.share(message);
-    } catch (e) {
-      print('Error sharing referral link: $e');
-    }
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Future<void> _inviteContact(String phone) async {
-    const String referralCode = "YOUR_REFERRAL_CODE"; // Get from your backend
-    const String message = '''
-Join Sports Academy with my referral code!
+  Widget _buildMyReferralsTab() {
+    return FutureBuilder<List<ReferralDetail>>(
+      future: ReferralService.getReferrals(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-Use code: $referralCode to get ₹90 off + free delivery on your first order.
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Error: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {});
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF303030),
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
 
-Download now: [App Link]
-    ''';
+        final referrals = snapshot.data ?? [];
 
-    try {
-      await Share.share(message);
-    } catch (e) {
-      print('Error inviting contact: $e');
-    }
+        if (referrals.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No referrals yet',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Share your referral code to get started',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: referrals.length,
+            itemBuilder: (context, index) {
+              final referral = referrals[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  title: Text(
+                    referral.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(referral.phone),
+                      Text(
+                        'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      if (referral.registrationDate != null)
+                        Text(
+                          'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                      if (referral.paymentCompletionDate != null)
+                        Text(
+                          'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                    ],
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildStatusChip(referral.displayStatus, referral.statusColor),
+                      if (referral.rewardStatus == 'credited')
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Session Credited',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusChip(String status, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(status,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 }

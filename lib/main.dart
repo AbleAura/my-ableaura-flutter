@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:my_ableaura/screens/children_list_screen.dart';
 import 'package:my_ableaura/screens/notifications_screen.dart';
-import 'package:my_ableaura/screens/payment_selection_screen.dart';
 import 'package:my_ableaura/screens/progress_report_screen.dart';
 import 'package:my_ableaura/screens/referral_screen.dart';
 import 'package:my_ableaura/screens/whatsapp_channels_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'screens/feedback/feedback_menu_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'config/build_config.dart';
+import 'screens/payments/payments_flow.dart';
 import 'services/notification_service.dart';
-
 // Global navigator key to be used across the app
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+    // Handle initial URI if app was opened from a deep link
   try {
     print('Flutter initialized');
 
@@ -97,7 +97,7 @@ class MyApp extends StatelessWidget {
             );
           case '/payments':
             return MaterialPageRoute(
-              builder: (_) => PaymentSelectionScreen(navigatorKey: navigatorKey)
+              builder: (_) => PaymentsFlow(navigatorKey: navigatorKey),
             );
           case '/referral':
             return MaterialPageRoute(
@@ -123,6 +123,12 @@ class MyApp extends StatelessWidget {
                 ),
               ),
             );
+            case '/feedback':
+  return MaterialPageRoute(
+    builder: (_) => FeedbackMenuScreen(
+      navigatorKey: navigatorKey,
+    ),
+  );
           case '/login':
             return MaterialPageRoute(
               builder: (_) => LoginScreen(navigatorKey: navigatorKey)

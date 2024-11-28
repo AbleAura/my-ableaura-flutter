@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class Environment {
   // Default values as fallback
   static const String DEFAULT_API_URL = 'https://dev.web.api.ableaura.com/academy/parent';
+  static const String DEFAULT_APP_URL = 'https://dev.academy.ableaura.com';  // Added default app URL
   static const String DEFAULT_RAZORPAY_KEY = 'rzp_test_default_key';
 
   static String get fileName =>
@@ -23,6 +24,7 @@ class Environment {
       // Verify loading
       print('Environment loaded successfully');
       print('API URL: ${dotenv.env['API_BASE_URL']}'); // Debug print
+      print('App URL: ${dotenv.env['APP_URL']}');  // Added debug print
       
     } catch (e) {
       print('Error loading environment file: $e'); // Debug print
@@ -37,6 +39,12 @@ class Environment {
     return url ?? DEFAULT_API_URL;
   }
       
+   static String get appUrl {  // Added app URL getter
+    final url = dotenv.env['APP_URL'];
+    print('Getting App URL: $url');
+    return url ?? DEFAULT_APP_URL;
+  }
+  
   static String get razorpayKey {
     final key = dotenv.env['RAZORPAY_KEY'];
     print('Getting Razorpay key: $key'); // Debug print

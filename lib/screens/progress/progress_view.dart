@@ -1,12 +1,8 @@
 // lib/screens/progress/progress_view.dart
 
 import 'package:flutter/material.dart';
-import 'package:my_ableaura/screens/progress/components.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import '../../models/progress_models.dart';
-import '../../services/student_service.dart';
-import 'progress_calendar_screen.dart';
+import 'progress_list_screen.dart';
+import 'overall_progress_screen.dart';
 
 class ProgressView extends StatelessWidget {
   final int childId;
@@ -29,18 +25,28 @@ class ProgressView extends StatelessWidget {
           foregroundColor: Colors.black,
           elevation: 0,
           bottom: TabBar(
-            tabs: [
+            tabs: const [
               Tab(text: 'Monthly View'),
               Tab(text: 'Overall Progress'),
             ],
-            labelColor: Colors.black,
+            labelColor: Colors.deepPurple,
             unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.deepPurple,
+            indicatorWeight: 3,
           ),
         ),
         body: TabBarView(
           children: [
-            ProgressCalendarScreen(childId: childId, childName: childName),
-            ProgressSummaryScreen(childId: childId, childName: childName),
+            // Monthly View Tab
+            ProgressListScreen(
+              childId: childId,
+              childName: childName,
+            ),
+            // Overall Progress Tab with AI Insights
+            OverallProgressScreen(
+              childId: childId,
+              childName: childName,
+            ),
           ],
         ),
       ),

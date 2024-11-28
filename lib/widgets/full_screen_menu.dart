@@ -1,5 +1,6 @@
 // full_screen_menu.dart
 import 'package:flutter/material.dart';
+import '../screens/feedback/feedback_menu_screen.dart';
 import '../services/student_service.dart';
 
 class FullScreenMenu extends StatelessWidget {
@@ -109,6 +110,20 @@ class FullScreenMenu extends StatelessWidget {
               subtitle: 'View my child\'s progress',
               onTap: () => _handleMenuItemTap(context, '/progress'),
             ),
+            _buildMenuItem(
+  context: context,
+  icon: Icons.feedback_outlined,
+  title: 'Feedback',
+  subtitle: 'Share your thoughts with us',
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => FeedbackMenuScreen(
+        navigatorKey: navigatorKey,
+      ),
+    ),
+  ),
+),
             const Divider(height: 40, thickness: 1),
             InkWell(
               onTap: () => _handleLogout(context),
