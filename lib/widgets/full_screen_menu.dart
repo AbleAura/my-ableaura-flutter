@@ -1,6 +1,10 @@
 // full_screen_menu.dart
 import 'package:flutter/material.dart';
+import '../screens/children_list_screen.dart';
+import '../screens/connect_with_us_screen.dart';
 import '../screens/feedback/feedback_menu_screen.dart';
+import '../screens/payments/payments_menu_screen.dart';
+import '../screens/progress/progress_view.dart';
 import '../services/student_service.dart';
 
 class FullScreenMenu extends StatelessWidget {
@@ -75,6 +79,116 @@ class FullScreenMenu extends StatelessWidget {
               subtitle: 'Manage Daily Attendances',
               onTap: () => _handleMenuItemTap(context, '/attendance'),
             ),
+                       _buildMenuItem(
+  context: context,
+  icon: Icons.payment,
+  title: 'Payments',
+  subtitle: 'Payments & History',
+  onTap: () async {
+    try {
+      final response = await StudentService.getChildrenList();
+      if (!context.mounted) return;
+      
+      Navigator.pop(context); // Close menu
+
+      if (response.data.childCount == 1) {
+        // Direct navigation to PaymentsMenuScreen for single child
+        final child = response.data.childDetails.first;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentsMenuScreen(
+              studentId: child.childId,
+              studentName: child.name,
+              navigatorKey: navigatorKey,
+            ),
+          ),
+        );
+      } else {
+        // Show child selection screen for multiple children
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildrenListScreen(
+              navigatorKey: navigatorKey,
+              onChildSelected: (childId, childName) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaymentsMenuScreen(
+                      studentId: childId,
+                      studentName: childName,
+                      navigatorKey: navigatorKey,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading children: $e')),
+      );
+    }
+  },
+),
+ _buildMenuItem(
+  context: context,
+  icon: Icons.trending_up,
+  title: 'Progress panel',
+  subtitle: 'View my child\'s progress',
+  onTap: () async {
+    try {
+      final response = await StudentService.getChildrenList();
+      if (!context.mounted) return;
+      
+      Navigator.pop(context); // Close menu
+
+      if (response.data.childCount == 1) {
+        // Direct navigation to ProgressView for single child
+        final child = response.data.childDetails.first;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProgressView(
+              childId: child.childId,
+              childName: child.name,
+            ),
+          ),
+        );
+      } else {
+        // Show child selection screen for multiple children
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildrenListScreen(
+              navigatorKey: navigatorKey,
+              onChildSelected: (childId, childName) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProgressView(
+                      childId: childId,
+                      childName: childName,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading children: $e')),
+      );
+    }
+  },
+),
             _buildMenuItem(
               context: context,
               icon: Icons.chat,
@@ -89,27 +203,8 @@ class FullScreenMenu extends StatelessWidget {
               subtitle: 'Refer Friends',
               onTap: () => _handleMenuItemTap(context, '/referral'),
             ),
-            _buildMenuItem(
-              context: context,
-              icon: Icons.payment,
-              title: 'Payments',
-              subtitle: 'Payments & History',
-              onTap: () => _handleMenuItemTap(context, '/payments'),
-            ),
-            _buildMenuItem(
-              context: context,
-              icon: Icons.location_on,
-              title: 'Addresses',
-              subtitle: 'Add & Edit Address',
-              onTap: () => _handleMenuItemTap(context, '/addresses'),
-            ),
-            _buildMenuItem(
-              context: context,
-              icon: Icons.trending_up,
-              title: 'Progress panel',
-              subtitle: 'View my child\'s progress',
-              onTap: () => _handleMenuItemTap(context, '/progress'),
-            ),
+
+          
             _buildMenuItem(
   context: context,
   icon: Icons.feedback_outlined,
@@ -119,6 +214,20 @@ class FullScreenMenu extends StatelessWidget {
     context,
     MaterialPageRoute(
       builder: (context) => FeedbackMenuScreen(
+        navigatorKey: navigatorKey,
+      ),
+    ),
+  ),
+),
+_buildMenuItem(
+  context: context,
+  icon: Icons.share_outlined,
+  title: 'Connect with Us',
+  subtitle: 'Follow us on social media',
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ConnectWithUsScreen(
         navigatorKey: navigatorKey,
       ),
     ),

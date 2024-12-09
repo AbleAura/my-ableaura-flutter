@@ -11,9 +11,18 @@ class ReferralService {
   static String get appUrl => BuildConfig.instance.appUrl;
 
    // Generate referral URL for sharing
-  static String getReferralUrl(String code) {
-    return '$appUrl/referral/referrer-details?referral_code=$code';
-  }
+static String getReferralUrl(String referralCode) {
+  // Create the metadata JSON
+  final metadata = {
+    'referral_code': referralCode,
+  };
+  
+  // Convert metadata to JSON string and URL encode it
+  final encodedMetadata = Uri.encodeComponent(jsonEncode(metadata));
+  
+  // Construct the full URL
+  return 'https://bookings.academy.ableaura.com/team/chennai/15-mins-referral-meeting?metadata=$encodedMetadata';
+}
   
   static Future<Map<String, dynamic>> generateCode() async {
     try {

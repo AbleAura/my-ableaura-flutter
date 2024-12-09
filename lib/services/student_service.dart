@@ -8,6 +8,8 @@ import 'package:my_ableaura/config/build_config.dart';
 import 'package:my_ableaura/models/payment.dart';
 import 'package:my_ableaura/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/attendance.dart';
+import '../models/gallery.dart';
 import '../models/session.dart';
 import '../models/child.dart';
 import '../models/enrollment.dart';
@@ -84,7 +86,66 @@ class StudentService {
     print('Fixed URL: $fixedUrl');
     return fixedUrl;
   }
+static Future<List<AttendanceRecord>> getAttendanceRecords(
+  int studentId,
+  DateTime month,
+) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
 
+    final response = await http.post(
+      Uri.parse('$baseUrl/attendance/view'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+        'month': month.month,
+        'year': month.year,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      final List<dynamic> records = data['data'];
+      return records.map((record) => AttendanceRecord.fromJson(record)).toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch attendance records');
+    }
+  } catch (e) {
+    print('Error fetching attendance records: $e');
+    throw Exception('Failed to fetch attendance records: $e');
+  }
+}
+static Future<GalleryResponse> getGalleryPhotos(int studentId) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/gallery/photos/get'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      return GalleryResponse.fromJson(data);
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch gallery photos');
+    }
+  } catch (e) {
+    print('Error fetching gallery photos: $e');
+    throw Exception('Failed to fetch gallery photos: $e');
+  }
+}
   // Get list of children
  static Future<ChildResponse> getChildrenList() async {
     try {

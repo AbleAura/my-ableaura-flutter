@@ -2,14 +2,14 @@
   "project_info": {
     "project_number": "156434530757",
     "project_id": "my-ableaura",
-    "storage_bucket": "my-ableaura.appspot.com"
+    "storage_bucket": "my-ableaura.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:156434530757:android:29265ca709f58e7e278bac",
+        "mobilesdk_app_id": "1:156434530757:android:d0b2ca0ceb1f4ac0278bac",
         "android_client_info": {
-          "package_name": "com.example.my_ableaura"
+          "package_name": "com.ableaura.sportsacademy"
         }
       },
       "oauth_client": [],

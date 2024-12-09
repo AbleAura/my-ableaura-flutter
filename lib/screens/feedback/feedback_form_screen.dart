@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../../models/feedback_type.dart';
 import '../../services/feedback_service.dart';
+import '../../widgets/recording_indicator.dart';
 
 class FeedbackFormScreen extends StatefulWidget {
   final String feedbackType;
@@ -28,7 +29,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   final _descriptionController = TextEditingController();
   late final AudioRecorder recorder;
   final _audioPlayer = AudioPlayer();
-  late final AudioRecorder _audioRecorder;
+  late final AudioRecorder _audioRecorder; // Change this line
 
   File? _voiceNote;
   List<File> _attachments = [];
@@ -41,7 +42,7 @@ class _FeedbackFormScreenState extends State<FeedbackFormScreen> {
   @override
   void initState() {
     super.initState();
-     _audioRecorder = AudioRecorder();
+        _audioRecorder = AudioRecorder(); // Initialize here
     _loadFeedbackTypes();
     _checkAndRequestPermissions();  // Add this line
   }
@@ -141,43 +142,44 @@ void _showOpenSettingsDialog() {
 }
 // And update the recording method
 Future<void> _startRecording() async {
-  try {
-    final status = await Permission.microphone.status;
-    if (status.isGranted) {
-      // Create temp file path for recording
-      final tempDir = await getTemporaryDirectory();
-      final path = '${tempDir.path}/recorded_audio.m4a';
-      
-      await recorder.start(const RecordConfig(), path: path);
-      setState(() => _isRecording = true);
-    } else {
-       _checkAndRequestPermissions();  // Show permission dialog if not granted
+    try {
+      final status = await Permission.microphone.status;
+      if (status.isGranted) {
+        // Create temp file path for recording
+        final tempDir = await getTemporaryDirectory();
+        final path = '${tempDir.path}/recorded_audio.m4a';
+        
+        await _audioRecorder.start(const RecordConfig(), path: path);
+        setState(() => _isRecording = true);
+      } else {
+        _checkAndRequestPermissions();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required'),
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Microphone permission is required'),
-        ),
+        SnackBar(content: Text('Failed to start recording: $e')),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to start recording: $e')),
-    );
   }
-}
 
-Future<void> _stopRecording() async {
-  try {
-    final path = await recorder.stop();
-    setState(() {
-      _isRecording = false;
-      if (path != null) _voiceNote = File(path);
-    });
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to stop recording: $e')),
-    );
+ Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+        if (path != null) _voiceNote = File(path);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to stop recording: $e')),
+      );
+    }
   }
-}
+
   Future<void> _loadFeedbackTypes() async {
     try {
       final types = await FeedbackService.getFeedbackTypes();
@@ -328,22 +330,24 @@ Future<void> _stopRecording() async {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Type Dropdown
-            DropdownButtonFormField<FeedbackType>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Feedback Type',
-                border: OutlineInputBorder(),
-              ),
-              items: _feedbackTypes.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(type.name),
-                );
-              }).toList(),
-              onChanged: (type) {
-                setState(() => _selectedType = type);
-              },
-            ),
+           DropdownButtonFormField<FeedbackType>(
+  value: _selectedType,
+  decoration: const InputDecoration(
+    labelText: 'Feedback Type',
+    border: OutlineInputBorder(),
+  ),
+  items: _feedbackTypes.map((type) {
+    return DropdownMenuItem(
+      value: type,
+      child: Text(type.name),
+    );
+  }).toList(),
+  onChanged: null, // This makes the dropdown unchangeable
+  style: TextStyle(
+    color: Colors.black, // Keep text readable even when disabled
+    fontSize: 16,
+  ),
+),
             const SizedBox(height: 16),
 
             // Title Field
@@ -368,69 +372,53 @@ Future<void> _stopRecording() async {
             const SizedBox(height: 24),
 
             // Voice Recording Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Voice Note',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        if (_voiceNote == null)
-                          GestureDetector(
-                            onLongPressStart: (_) => _startRecording(),
-                            onLongPressEnd: (_) => _stopRecording(),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _isRecording ? Icons.mic : Icons.mic_none,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _isRecording
-                                        ? 'Recording... Release to stop'
-                                        : 'Press and hold to record',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        else
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-                                onPressed: _playVoiceNote,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () {
-                                  setState(() => _voiceNote = null);
-                                },
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ],
+           Card(
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Voice Note',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            if (_voiceNote == null)
+              Expanded(
+                child: GestureDetector(
+                  onLongPressStart: (_) => _startRecording(),
+                  onLongPressEnd: (_) => _stopRecording(),
+                  child: RecordingIndicator(
+                    isRecording: _isRecording,
+                  ),
                 ),
+              )
+            else
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                    onPressed: _playVoiceNote,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () {
+                      setState(() => _voiceNote = null);
+                    },
+                  ),
+                ],
               ),
-            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+),
             const SizedBox(height: 16),
 
             // Attachments Section
@@ -508,7 +496,10 @@ Future<void> _stopRecording() async {
                   )
                 : const Text(
                     'Submit Feedback',
-                    style: TextStyle(fontSize: 16),
+                    style: TextStyle(
+                color: Colors.white,  // Add this line
+                fontSize: 16,
+              ),
                   ),
           ),
         ),
@@ -521,6 +512,7 @@ Future<void> _stopRecording() async {
     _titleController.dispose();
     _descriptionController.dispose();
     _audioPlayer.dispose();
+       _audioRecorder.dispose(); // Add this line
     super.dispose();
   }
 }

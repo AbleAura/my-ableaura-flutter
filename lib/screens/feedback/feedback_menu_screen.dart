@@ -1,6 +1,7 @@
 // lib/screens/feedback/feedback_menu_screen.dart
 import 'package:flutter/material.dart';
 import 'feedback_form_screen.dart';
+import 'feedback_history.dart';
 
 class FeedbackMenuScreen extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -24,6 +25,18 @@ class FeedbackMenuScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // History Section
+            _buildFeedbackOption(
+              context,
+              title: 'View History',
+              subtitle: 'Check your previous feedback',
+              icon: Icons.history,
+              color: Colors.blue,
+              onTap: () => _navigateToHistory(context),
+            ),
+            const SizedBox(height: 32),
+            
+            // New Feedback Section
             Text(
               'Share Your Feedback',
               style: const TextStyle(
@@ -59,6 +72,15 @@ class FeedbackMenuScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _navigateToHistory(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FeedbackHistoryScreen(navigatorKey: navigatorKey),
       ),
     );
   }

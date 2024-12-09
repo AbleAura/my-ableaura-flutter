@@ -364,7 +364,7 @@ Click here to join: $referralUrl
     );
   }
 
-  Widget _buildMyReferralsTab() {
+Widget _buildMyReferralsTab() {
     return FutureBuilder<List<ReferralDetail>>(
       future: ReferralService.getReferrals(),
       builder: (context, snapshot) {
@@ -436,75 +436,80 @@ Click here to join: $referralUrl
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: referrals.length,
-            itemBuilder: (context, index) {
-              final referral = referrals[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  title: Text(
-                    referral.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(referral.phone),
-                      Text(
-                        'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                      if (referral.registrationDate != null)
-                        Text(
-                          'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        ),
-                      if (referral.paymentCompletionDate != null)
-                        Text(
-                          'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        ),
-                    ],
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildStatusChip(referral.displayStatus, referral.statusColor),
-                      if (referral.rewardStatus == 'credited')
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Session Credited',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            itemBuilder: (context, index) => _buildReferralCard(referrals[index]),
           ),
         );
       },
     );
-  }
+}
 
+Widget _buildReferralCard(ReferralDetail referral) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: ListTile(
+      contentPadding: const EdgeInsets.all(16),
+      title: Text(
+        referral.name,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(referral.phone),
+          Text(
+            'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          if (referral.meetingScheduledAt != null)  // Added
+            Text(
+              'Meeting Scheduled: ${DateFormat('MMM d, yyyy').format(referral.meetingScheduledAt!)}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          if (referral.registrationDate != null)
+            Text(
+              'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          if (referral.paymentCompletionDate != null)
+            Text(
+              'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+        ],
+      ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _buildStatusChip(referral.displayStatus, referral.statusColor),
+          if (referral.rewardStatus == 'credited')
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Session Credited',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
   Widget _buildStatusChip(String status, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

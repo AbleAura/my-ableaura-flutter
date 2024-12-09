@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.my_ableaura"
+        applicationId "com.ableaura.sportsacademy"
         minSdkVersion 23  // Set this explicitly to 21 for Firebase
         targetSdk = 34
         versionCode flutter.versionCode.toInteger()

@@ -1,4 +1,5 @@
 import 'feedback_attachment.dart';
+import 'feedback_type.dart';
 
 class FeedbackModel {
   final int id;
@@ -9,6 +10,7 @@ class FeedbackModel {
   final String status;
   final List<FeedbackAttachment> attachments;
   final DateTime createdAt;
+  final FeedbackType? feedbackType;  // Make this nullable
 
   FeedbackModel({
     required this.id,
@@ -19,6 +21,7 @@ class FeedbackModel {
     required this.status,
     required this.attachments,
     required this.createdAt,
+    this.feedbackType,  // Make this optional
   });
 
   factory FeedbackModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,9 @@ class FeedbackModel {
           ?.map((x) => FeedbackAttachment.fromJson(x))
           .toList() ?? [],
       createdAt: DateTime.parse(json['created_at']),
+      feedbackType: json['feedback_type'] != null 
+          ? FeedbackType.fromJson(json['feedback_type'])
+          : null,  // Handle null feedback_type
     );
   }
 }

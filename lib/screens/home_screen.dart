@@ -1,8 +1,12 @@
 // home_screen.dart
 import 'package:flutter/material.dart';
+import '../services/student_service.dart';
 import '/widgets/full_screen_menu.dart';
+import 'attendance_menu_screen.dart';
 import 'children_list_screen.dart';
+import 'connect_with_us_screen.dart';
 import 'feedback/feedback_menu_screen.dart';
+import 'gallery_screen.dart';
 import 'payments/payments_menu_screen.dart';
 import 'referral_screen.dart';
 import 'whatsapp_channels_screen.dart';
@@ -35,22 +39,218 @@ class HomeScreen extends StatelessWidget {
 
   List<MenuItem> _getMenuItems(BuildContext context) {
     return [
-      MenuItem(
-        title: 'Attendance',
-        icon: Icons.calendar_today_outlined,
-        color: Colors.blue,
-        subtitle: 'Mark daily attendance',
+      // Update the Attendance MenuItem in _getMenuItems method
+MenuItem(
+  title: 'Attendance',
+  icon: Icons.calendar_today_outlined,
+  color: Colors.blue,
+  subtitle: 'Mark daily attendance',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AttendanceMenuScreen(
+          navigatorKey: navigatorKey,
+        ),
+      ),
+    );
+  },
+),
+      // Update the Payments MenuItem in _getMenuItems method
+MenuItem(
+  title: 'My Payments',
+  icon: Icons.payment_outlined,
+  color: Colors.purple,
+  subtitle: 'View and pay fees',
+  onTap: () async {
+    try {
+      final response = await StudentService.getChildrenList();
+      if (!context.mounted) return;
+
+      if (response.data.childCount == 1) {
+        // Direct navigation to PaymentsMenuScreen for single child
+        final child = response.data.childDetails.first;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentsMenuScreen(
+              studentId: child.childId,
+              studentName: child.name,
+              navigatorKey: navigatorKey,
+            ),
+          ),
+        );
+      } else {
+        // Show child selection screen for multiple children
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildrenListScreen(
+              navigatorKey: navigatorKey,
+              onChildSelected: (childId, childName) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaymentsMenuScreen(
+                      studentId: childId,
+                      studentName: childName,
+                      navigatorKey: navigatorKey,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading children: $e')),
+      );
+    }
+  },
+),
+ // Update the Progress Panel MenuItem in _getMenuItems method
+MenuItem(
+  title: 'Progress Panel',
+  icon: Icons.trending_up,
+  color: Colors.red,
+  subtitle: 'Track skill development',
+  onTap: () async {
+    try {
+      final response = await StudentService.getChildrenList();
+      if (!context.mounted) return;
+
+      if (response.data.childCount == 1) {
+        // Direct navigation to ProgressView for single child
+        final child = response.data.childDetails.first;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProgressView(
+              childId: child.childId,
+              childName: child.name,
+            ),
+          ),
+        );
+      } else {
+        // Show child selection screen for multiple children
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildrenListScreen(
+              navigatorKey: navigatorKey,
+              onChildSelected: (childId, childName) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProgressView(
+                      childId: childId,
+                      childName: childName,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading children: $e')),
+      );
+    }
+  },
+),
+MenuItem(
+  title: 'My Child\'s Gallery',
+  icon: Icons.photo_library_outlined,
+  color: Colors.teal,
+  subtitle: 'View photos and videos',
+  onTap: () async {
+    try {
+      final response = await StudentService.getChildrenList();
+      if (!context.mounted) return;
+
+      if (response.data.childCount == 1) {
+        // Direct navigation for single child
+        final child = response.data.childDetails.first;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GalleryScreen(
+              studentId: child.childId,
+              studentName: child.name,
+            ),
+          ),
+        );
+      } else {
+        // Show child selection for multiple children
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChildrenListScreen(
+              navigatorKey: navigatorKey,
+              onChildSelected: (childId, childName) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GalleryScreen(
+                      studentId: childId,
+                      studentName: childName,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading children: $e')),
+      );
+    }
+  },
+),
+       MenuItem(
+        title: 'My Referrals',
+        icon: Icons.people_outline,
+        color: Colors.orange,
+        subtitle: 'Refer friends and earn',
         onTap: () {
-          print('Navigating to Attendance');
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChildrenListScreen(navigatorKey: navigatorKey),
+              builder: (context) => ReferralScreen(navigatorKey: navigatorKey),
             ),
           );
         },
       ),
+     
+     
+   
+     
       MenuItem(
+  title: 'Feedback',
+  icon: Icons.feedback_outlined,
+  color: Colors.purple,
+  subtitle: 'Share your thoughts with us',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FeedbackMenuScreen(
+          navigatorKey: navigatorKey,
+        ),
+      ),
+    );
+  },
+),
+ MenuItem(
         title: 'Connect to WhatsApp',
         icon: Icons.chat_bubble_outline,
         color: Colors.green,
@@ -65,100 +265,16 @@ class HomeScreen extends StatelessWidget {
           );
         },
       ),
-      MenuItem(
-        title: 'My Referrals',
-        icon: Icons.people_outline,
-        color: Colors.orange,
-        subtitle: 'Refer friends and earn',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReferralScreen(navigatorKey: navigatorKey),
-            ),
-          );
-        },
-      ),
-    MenuItem(
-  title: 'My Payments',
-  icon: Icons.payment_outlined,
-  color: Colors.purple,
-  subtitle: 'View and pay fees',
-  onTap: () {
-    print('Navigating to Payments Selection');
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChildrenListScreen(
-          navigatorKey: navigatorKey,
-          onChildSelected: (childId, childName) {
-            // After child is selected, navigate to PaymentsMenuScreen
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PaymentsMenuScreen(
-                  studentId: childId,
-                  studentName: childName,
-                  navigatorKey: navigatorKey,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  },
-),
-      MenuItem(
-        title: 'Progress Panel',
-        icon: Icons.trending_up,
-        color: Colors.red,
-        subtitle: 'Track skill development',
-        onTap: () {
-          print('Navigating to Progress Panel');
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChildrenListScreen(
-                navigatorKey: navigatorKey,
-                onChildSelected: (childId, childName) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProgressView(
-                        childId: childId,
-                        childName: childName,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        },
-      ),
-      MenuItem(
-        title: 'My Child\'s Gallery',
-        icon: Icons.photo_library_outlined,
-        color: Colors.teal,
-        subtitle: 'View photos and videos',
-        onTap: () {
-          print('Navigating to Gallery');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Coming soon!')),
-          );
-        },
-      ),
-      MenuItem(
-  title: 'Feedback',
-  icon: Icons.feedback_outlined,
-  color: Colors.purple,
-  subtitle: 'Share your thoughts with us',
+MenuItem(
+  title: 'Connect with Us',
+  icon: Icons.share_outlined,
+  color: Colors.indigo,
+  subtitle: 'Follow us on social media',
   onTap: () {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FeedbackMenuScreen(
+        builder: (context) => ConnectWithUsScreen(
           navigatorKey: navigatorKey,
         ),
       ),
