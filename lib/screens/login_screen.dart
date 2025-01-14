@@ -1,9 +1,10 @@
-// login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/auth_service.dart';
+import '../services/policy_service.dart';
 import 'otp_verification_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -26,29 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Error'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(message),
-            if (message.contains('9159911116'))
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF303030),
-                  ),
-                  onPressed: () async {
-                    final Uri url = Uri.parse('tel:9159911116');
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    }
-                  },
-                  child: Text('Call Support'),
-                ),
-              ),
-          ],
-        ),
+        content: Text(message),
         actions: [
           TextButton(
             child: const Text('OK'),
@@ -58,6 +37,90 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showPolicyDialog(BuildContext context, String type) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: FutureBuilder<String>(
+            future: PolicyService.getPolicyContent(type),
+            builder: (context, snapshot) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
+                  maxWidth: MediaQuery.of(context).size.width * 0.9,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          type == 'terms' ? 'Terms & Conditions' : 'Privacy Policy',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (snapshot.hasError)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Error loading content: ${snapshot.error}',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                              const SizedBox(height: 10),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _showPolicyDialog(context, type);
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Markdown(
+                          data: snapshot.data!,
+                          selectable: true,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -107,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.asset(
-             'assets/login_top.jpeg',
+              'assets/login_top.jpeg',
               width: double.infinity,
               fit: BoxFit.cover,
               height: 200,
@@ -131,15 +194,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        height: 56,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
+                          border: Border.all(color: Colors.grey.shade400),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Row(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('🇮🇳 +91'),
-                            Icon(Icons.arrow_drop_down),
+                            const Text('🇮🇳 +91'),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
                           ],
                         ),
                       ),
@@ -147,10 +213,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(
                         child: TextField(
                           controller: _phoneController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Mobile number',
-                            border: OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey.shade400),
+                            ),
                             counterText: '',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                           ),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -170,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     onPressed: _isLoading ? null : _sendOTP,
                     child: _isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(
@@ -178,12 +247,41 @@ class _LoginScreenState extends State<LoginScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text('CONTINUE', style: TextStyle(color: Colors.white)),
+                        : const Text('CONTINUE', style: TextStyle(color: Colors.white)),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'By clicking, I accept the Terms & Conditions and Privacy Policy',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        children: [
+                          const TextSpan(text: 'By clicking, I accept the '),
+                          TextSpan(
+                            text: 'Terms & Conditions',
+                            style: const TextStyle(
+                              color: Color(0xFF303030),
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showPolicyDialog(context, 'terms'),
+                          ),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: const TextStyle(
+                              color: Color(0xFF303030),
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _showPolicyDialog(context, 'privacy'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

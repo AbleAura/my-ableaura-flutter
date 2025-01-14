@@ -284,4 +284,49 @@ static Future<Map<String, dynamic>> createOrder(int paymentId,String amount, Str
       throw 'Failed to get payment receipt';
     }
   }
+
+  // New method to get discounted amount
+  static Future<Map<String, dynamic>> applyFreeSessionDiscount(int paymentId, int rewardId) async {
+    try {
+      final response = await _dio.post(
+        '$_baseUrl/free-sessions/amend',
+        data: {
+          'payment_id': paymentId,
+          'reward_id': rewardId
+        },
+        options: Options(headers: await _getHeaders()),
+      );
+
+      if (response.data['success'] == true) {
+        return {
+          'discount_attempt_id': response.data['data']['discount_attempt_id'],
+          'original_amount': response.data['data']['original_amount'],
+          'discounted_amount': response.data['data']['discounted_amount'],
+        };
+      } else {
+        throw response.data['message'] ?? 'Failed to apply discount';
+      }
+    } catch (e) {
+      throw 'Failed to apply discount: $e';
+    }
+  }
+
+  // New method to complete discount application
+  static Future<void> completeFreeSessionDiscount(int discountAttemptId) async {
+    try {
+      final response = await _dio.post(
+        '$_baseUrl/free-sessions/amend/apply',
+        data: {
+          'discount_attempt_id': discountAttemptId
+        },
+        options: Options(headers: await _getHeaders()),
+      );
+
+      if (response.data['success'] != true) {
+        throw response.data['message'] ?? 'Failed to complete discount application';
+      }
+    } catch (e) {
+      throw 'Failed to complete discount application: $e';
+    }
+  }
 }

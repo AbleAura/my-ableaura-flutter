@@ -1,5 +1,8 @@
 // student_service.dart
 
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -7,9 +10,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:my_ableaura/config/build_config.dart';
 import 'package:my_ableaura/models/payment.dart';
 import 'package:my_ableaura/screens/login_screen.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/attendance.dart';
+import '../models/free_session.dart';
 import '../models/gallery.dart';
+import '../models/home_session.dart';
 import '../models/session.dart';
 import '../models/child.dart';
 import '../models/enrollment.dart';
@@ -119,17 +126,12 @@ static Future<List<AttendanceRecord>> getAttendanceRecords(
     throw Exception('Failed to fetch attendance records: $e');
   }
 }
+// Update the method signature to include the return type
 static Future<GalleryResponse> getGalleryPhotos(int studentId) async {
   try {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('Authentication token not found');
-
     final response = await http.post(
       Uri.parse('$baseUrl/gallery/photos/get'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: await _getHeaders(),
       body: jsonEncode({
         'student_id': studentId,
       }),
@@ -146,7 +148,119 @@ static Future<GalleryResponse> getGalleryPhotos(int studentId) async {
     throw Exception('Failed to fetch gallery photos: $e');
   }
 }
+static Future<List<HomeSession>> getHomeSessions(int studentId) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/athome/sessions/view'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'student_id': studentId,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      final List<dynamic> sessions = data['data'];
+      return sessions.map((session) => HomeSession.fromJson(session)).toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch home sessions');
+    }
+  } catch (e) {
+    print('Error fetching home sessions: $e');
+    throw Exception('Failed to fetch home sessions: $e');
+  }
+}
+static Future<void> submitSessionFeedback({
+  required int sessionId,
+  required int rating,
+  required List<String> aspects,
+  required bool isPositive,
+  required String comments,
+  File? attachment,
+}) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/academy/parent/session/feedback/submit'),
+    );
+
+    // Add headers
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+    });
+
+    // Add fields
+    request.fields.addAll({
+      'session_id': sessionId.toString(),
+      'rating': rating.toString(),
+      'aspects': jsonEncode(aspects),
+      'is_positive': isPositive.toString(),
+      'comments': comments,
+    });
+
+    // Add file if exists
+    if (attachment != null) {
+      final file = await http.MultipartFile.fromPath(
+        'attachment',
+        attachment.path,
+      );
+      request.files.add(file);
+    }
+
+    final response = await request.send();
+    final responseData = await response.stream.bytesToString();
+    final data = jsonDecode(responseData);
+
+    if (!data['success']) {
+      throw Exception(data['message'] ?? 'Failed to submit feedback');
+    }
+  } catch (e) {
+    print('Error submitting feedback: $e');
+    throw Exception('Failed to submit feedback: $e');
+  }
+}
   // Get list of children
+    static Future<String?> getQRCode(int studentId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${BuildConfig.instance.baseUrl}/student/get/qrcode'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 500) {
+        return null; // Indicates QR code doesn't exist
+      }
+
+      final data = jsonDecode(response.body);
+      return data['data']['qr_code'];
+    } catch (e) {
+      throw Exception('Failed to get QR code: $e');
+    }
+  }
+
+   static Future<void> generateQRCode(int studentId) async {
+    try {
+      await http.post(
+        Uri.parse('${BuildConfig.instance.baseUrl}/student/generate/qrcode'),
+        headers: await _getHeaders(),
+        body: jsonEncode({
+          'student_id': studentId,
+        }),
+      );
+    } catch (e) {
+      throw Exception('Failed to generate QR code: $e');
+    }
+  }
+
  static Future<ChildResponse> getChildrenList() async {
     try {
       final token = await _getAuthToken();
@@ -173,43 +287,107 @@ static Future<GalleryResponse> getGalleryPhotos(int studentId) async {
       throw Exception('Failed to fetch children list: $e');
     }
   }
-static Future<String?> getStudentQRCode(int studentId) async {
-  try {
-    final token = await _getAuthToken();
-    if (token == null) throw Exception('Authentication token not found');
+  
+ static Future<String?> getStudentQRCode(int studentId) async {
+    try {
+      final token = await _getAuthToken();
+      if (token == null) throw Exception('Authentication token not found');
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/student/get/qrcode'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'student_id': studentId,
-      }),
+      final response = await http.post(
+        Uri.parse('$baseUrl/student/get/qrcode'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'student_id': studentId,
+        }),
+      );
+
+      if (response.statusCode == 500) {
+        return null; // Indicates QR code doesn't exist
+      }
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final qrUrl = data['qr_code_pic'] as String;
+        return _fixS3Url(qrUrl);
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get QR code');
+      }
+    } catch (e) {
+      print('Error getting QR code: $e');
+      throw Exception('Failed to get QR code: $e');
+    }
+  }
+
+   static Future<String> waitForQRCode(int studentId, {int maxAttempts = 10}) async {
+    for (int i = 0; i < maxAttempts; i++) {
+      final qrCode = await getStudentQRCode(studentId);
+      if (qrCode != null) {
+        return qrCode;
+      }
+      if (i == 0) {
+        // First attempt, generate QR code
+        await generateQRCode(studentId);
+      }
+      // Wait before next attempt
+      await Future.delayed(const Duration(seconds: 2));
+    }
+    throw Exception('QR code generation timed out');
+  }
+// Add this method to your StudentService class
+static Future<String> downloadGalleryPhoto(String photoUrl) async {
+  try {
+    final dio = Dio();
+    
+    // Use the complete S3 URL directly without modifications
+    final String fullUrl = photoUrl;
+    
+    print('Downloading from URL: $fullUrl'); // Debug log
+    
+    // Get path for downloads directory
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'SA_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savePath = '${directory.path}/$fileName';
+
+    // For S3 URLs, we don't need any special headers
+    final response = await dio.get(
+      fullUrl,
+      options: Options(
+        responseType: ResponseType.bytes,
+        followRedirects: true,
+        contentType: 'application/octet-stream',
+        headers: {
+          'Accept': '*/*',
+        },
+      ),
     );
 
-    print('QR Code Response: ${response.body}'); // Debug print
-
-    final data = jsonDecode(response.body);
-    if (data['success'] == true) {
-      final qrUrl = data['qr_code_pic'] as String;
-      
-      // Fix double slash in URL
-      final fixedUrl = qrUrl.replaceAll(RegExp(r'(?<!:)//'), '/');
-      print('Fixed QR URL: $fixedUrl'); // Debug print
-      
-      return fixedUrl;
-    } else {
-      throw Exception(data['message'] ?? 'Failed to get QR code');
+    if (response.statusCode != 200) {
+      print('Download failed with status: ${response.statusCode}'); // Debug log
+      print('Response headers: ${response.headers}'); // Debug log
+      throw Exception('Failed to download: Status ${response.statusCode}');
     }
+
+    // Save bytes to file
+    final file = File(savePath);
+    await file.writeAsBytes(response.data);
+
+    print('File saved successfully to: $savePath'); // Debug log
+    return savePath;
+
   } catch (e) {
-    print('Error getting QR code: $e');
-    throw Exception('Failed to get QR code: $e');
+    print('Error downloading image: $e');
+    if (e is DioException) {
+      print('DioError type: ${e.type}');
+      print('DioError message: ${e.message}');
+      print('DioError response: ${e.response}');
+    }
+    rethrow;
   }
 }
-
-  // Get child enrollments
+// Get child enrollments
   static Future<List<Enrollment>> getChildEnrollments(int childId) async {
     try {
       final token = await _getAuthToken();
@@ -238,7 +416,34 @@ static Future<String?> getStudentQRCode(int studentId) async {
       throw Exception('Failed to fetch enrollments: $e');
     }
   }
+static Future<List<FreeSession>> checkFreeSessionsAvailable() async {
+  try {
+    final response = await http.post(
+      Uri.parse('${BuildConfig.instance.baseUrl}/free-sessions/check'),
+      headers: await _getHeaders(),
+    );
 
+    final data = jsonDecode(response.body);
+    if (data['success']) {
+      return (data['data'] as List)
+          .map((session) => FreeSession.fromJson(session))
+          .where((session) => session.isAvailable)
+          .toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to check free sessions');
+    }
+  } catch (e) {
+    throw Exception('Failed to check free sessions: $e');
+  }
+}
+
+static Future<Map<String, String>> _getHeaders() async {
+  final token = await _getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+}
   // Get enrolled sessions
   static Future<List<Session>> getEnrolledSessions({
     required int franchiseId,
@@ -538,4 +743,6 @@ static Future<Map<String, dynamic>> getCombinedPaymentOrder(int studentId) async
       }
     }
   }
+
+  static applyFreeSession(int id, id2) {}
 }

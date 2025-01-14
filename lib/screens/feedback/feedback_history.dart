@@ -1,6 +1,13 @@
+// lib/screens/feedback_history_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../../models/feedback.dart';
 import '../../services/feedback_service.dart';
+import '../../widgets/feedback_detail_dialog.dart';
+import '../../widgets/attachments_bottom_sheet.dart';
 
 class FeedbackHistoryScreen extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -43,17 +50,16 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
     }
   }
 
-Color _getTypeColor(String? type) {
-  switch (type?.toLowerCase()) {
-    case 'complaint':
-      return Colors.red;
-    case 'suggestion':
-      return Colors.green;
-    default:
-      return Colors.grey;
+  Color _getTypeColor(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'complaint':
+        return Colors.red;
+      case 'suggestion':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
-}
-
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -70,7 +76,7 @@ Color _getTypeColor(String? type) {
 
   Widget _buildChip(String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -87,6 +93,25 @@ Color _getTypeColor(String? type) {
     );
   }
 
+  void _showFeedbackDetail(FeedbackModel feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => FeedbackDetailDialog(feedback: feedback),
+    );
+  }
+
+  void _showAttachments(BuildContext context, FeedbackModel feedback) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AttachmentsBottomSheet(
+        attachments: feedback.attachments,
+        title: feedback.title,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,120 +121,150 @@ Color _getTypeColor(String? type) {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _feedbackHistory.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history, size: 64, color: Colors.grey[400]),
-                      SizedBox(height: 16),
-                      Text(
-                        'No feedback history found',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _feedbackHistory.length,
-                  itemBuilder: (context, index) {
-                    final feedback = _feedbackHistory[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    feedback.title,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                               Icon(
-  feedback.feedbackType?.name.toLowerCase() == 'complaint'
-      ? Icons.warning_amber_rounded
-      : Icons.lightbulb_outline,
-  color: _getTypeColor(feedback.feedbackType?.name ?? 'unknown'),
-),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-_buildChip(
-  feedback.feedbackType?.name ?? 'Unknown Type',
-  _getTypeColor(feedback.feedbackType?.name ?? 'unknown'),
-),
-                                SizedBox(width: 8),
-                                _buildChip(
-                                  feedback.status,
-                                  _getStatusColor(feedback.status),
-                                ),
-                              ],
-                            ),
-                            if (feedback.description != null) ...[
-                              SizedBox(height: 12),
-                              Text(
-                                feedback.description!,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                            SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: RefreshIndicator(
+        onRefresh: _loadFeedbackHistory,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _feedbackHistory.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No feedback history found',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _feedbackHistory.length,
+                    itemBuilder: (context, index) {
+                      final feedback = _feedbackHistory[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          onTap: () => _showFeedbackDetail(feedback),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    if (feedback.voiceNotePath != null)
-                                      Icon(Icons.mic, size: 16, color: Colors.grey),
-                                    if (feedback.attachments.isNotEmpty) ...[
-                                      if (feedback.voiceNotePath != null)
-                                        SizedBox(width: 8),
-                                      Icon(Icons.attach_file,
-                                          size: 16, color: Colors.grey),
-                                      Text(
-                                        ' ${feedback.attachments.length}',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 12,
+                                    Expanded(
+                                      child: Text(
+                                        feedback.title,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                    Icon(
+                                      feedback.feedbackType?.name.toLowerCase() == 'complaint'
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.lightbulb_outline,
+                                      color: _getTypeColor(feedback.feedbackType?.name ?? 'unknown'),
+                                    ),
                                   ],
                                 ),
-                                Text(
-                                  feedback.createdAt.toString().split(' ')[0],
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    _buildChip(
+                                      feedback.feedbackType?.name ?? 'Unknown Type',
+                                      _getTypeColor(feedback.feedbackType?.name ?? 'unknown'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildChip(
+                                      feedback.status,
+                                      _getStatusColor(feedback.status),
+                                    ),
+                                  ],
+                                ),
+                                if (feedback.description != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    feedback.description!,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
+                                ],
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (feedback.voiceNotePath != null)
+                                          GestureDetector(
+                                            onTap: () => _showFeedbackDetail(feedback),
+                                            child: Row(
+                                              children: const [
+                                                Icon(Icons.mic, size: 16, color: Colors.grey),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Play Voice Note',
+                                                  style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 12,
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        if (feedback.voiceNotePath != null && feedback.attachments.isNotEmpty)
+                                          const SizedBox(width: 16),
+                                        if (feedback.attachments.isNotEmpty)
+                                          GestureDetector(
+                                            onTap: () => _showAttachments(context, feedback),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.attach_file, size: 16, color: Colors.grey),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${feedback.attachments.length} Attachment${feedback.attachments.length > 1 ? 's' : ''}',
+                                                  style: const TextStyle(
+                                                    color: Colors.grey,
+                                                    fontSize: 12,
+                                                    decoration: TextDecoration.underline,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    Text(
+                                      DateFormat('MMM d, y').format(feedback.createdAt),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+      ),
     );
   }
 }

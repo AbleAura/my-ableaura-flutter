@@ -14,6 +14,8 @@ class PaymentHistory {
   final String level;
   final DateTime createdAt;
   final DateTime updatedAt;
+    final String? paymentMonth;  // Changed to String to match API
+  final int? paymentYear;
 
   PaymentHistory({
     required this.id,
@@ -31,6 +33,8 @@ class PaymentHistory {
     required this.level,
     required this.createdAt,
     required this.updatedAt,
+      this.paymentMonth,
+    this.paymentYear,
   });
 
   factory PaymentHistory.fromJson(Map<String, dynamic> json) {
@@ -50,6 +54,8 @@ class PaymentHistory {
       level: json['level'] ?? '',
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+      paymentMonth: json['payment_month'],
+      paymentYear: json['payment_year'],
     );
   }
 }

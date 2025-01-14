@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/profile/profile_screen.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -6,87 +7,120 @@ class CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Color(0xFF303030),
-            ),
-            child: Text(
-              'Menu',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'Menu',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          _buildDrawerItem(
-            icon: Icons.calendar_today,
-            title: 'Attendances',
-            subtitle: 'Manage Daily Attendances',
-            onTap: () {
-              // Navigate to Attendances screen
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.chat,
-            title: 'WhatsApp Channels',
-            subtitle: 'View Ableaura\'s Channels',
-            onTap: () {
-              // Navigate to WhatsApp Channels screen
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.people,
-            title: 'Referrals',
-            subtitle: 'Refer Friends',
-            onTap: () {
-              // Navigate to Referrals screen
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.payment,
-            title: 'Payments',
-            subtitle: 'Payments & History',
-            onTap: () {
-              // Navigate to Payments screen
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.location_on,
-            title: 'Addresses',
-            subtitle: 'Add & Edit Address',
-            onTap: () {
-              // Navigate to Addresses screen
-              Navigator.pop(context);
-            },
-          ),
-          _buildDrawerItem(
-            icon: Icons.trending_up,
-            title: 'Progress panel',
-            subtitle: 'View my child\'s progress',
-            onTap: () {
-              // Navigate to Progress panel screen
-              Navigator.pop(context);
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.exit_to_app),
-            title: const Text('Logout'),
-            onTap: () {
-              // Implement logout functionality
-              Navigator.pop(context);
-              // You might want to navigate to the login screen here
-              // Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
-            },
-          ),
-        ],
+            const SizedBox(height: 16),
+               // Add Profile menu item here
+            _buildDrawerItem(
+              icon: Icons.person,
+              title: 'Your Profile',
+              subtitle: 'View Profile Details',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                );
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.calendar_today,
+              title: 'Attendances',
+              subtitle: 'Manage Daily Attendances',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.payment,
+              title: 'Payments',
+              subtitle: 'Payments & History',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.trending_up,
+              title: 'Progress panel',
+              subtitle: 'View my child\'s progress',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.chat,
+              title: 'WhatsApp Channels',
+              subtitle: 'View Ableaura\'s Channels',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.people,
+              title: 'Referrals',
+              subtitle: 'Refer Friends',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.feedback,
+              title: 'Feedback',
+              subtitle: 'Share your thoughts with us',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            _buildDrawerItem(
+              icon: Icons.share,
+              title: 'Connect with Us',
+              subtitle: 'Follow us on social media',
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.exit_to_app, color: Colors.red[400]),
+              title: Text(
+                'Logout',
+                style: TextStyle(color: Colors.red[400]),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -98,9 +132,20 @@ class CustomDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
+      leading: Icon(icon, color: Colors.black87),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(
+          color: Colors.grey,
+        ),
+      ),
       onTap: onTap,
     );
   }

@@ -6,6 +6,7 @@ class Payment {
   final String paymentStatus;
   final String paymentWeek;
   final String paymentMonth;
+    final String paymentYear; // Add this line
   final String? invoicePath;
 
   Payment({
@@ -16,6 +17,7 @@ class Payment {
     required this.paymentStatus,
     required this.paymentWeek,
     required this.paymentMonth,
+     required this.paymentYear,
     this.invoicePath,
   });
 
@@ -31,6 +33,7 @@ class Payment {
         paymentStatus: json['payment_status'] as String? ?? 'pending',
         paymentWeek: (json['payment_week'] ?? '').toString(),
         paymentMonth: (json['payment_month'] ?? '').toString(),
+        paymentYear: (json['payment_year'] ?? '').toString(),
         invoicePath: json['invoice_path'] as String?,
       );
     } catch (e) {

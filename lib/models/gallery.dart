@@ -1,3 +1,5 @@
+// lib/models/gallery.dart
+
 class GalleryPhoto {
   final int id;
   final DateTime date;
@@ -12,6 +14,9 @@ class GalleryPhoto {
     required this.confidenceScore,
     required this.uploadBatch,
   });
+
+  // Get the complete URL for the photo
+  String get fullUrl => url.startsWith('http') ? url : '/storage$url';
 
   factory GalleryPhoto.fromJson(Map<String, dynamic> json) {
     return GalleryPhoto(

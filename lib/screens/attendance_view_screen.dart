@@ -28,6 +28,109 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
     _loadAttendance();
   }
 
+  Future<void> _showMonthPicker() async {
+    final currentYear = DateTime.now().year;
+    int selectedYear = selectedMonth.year;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: 300,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: selectedYear > 2020
+                            ? () {
+                                setModalState(() => selectedYear--);
+                              }
+                            : null,
+                      ),
+                      Text(
+                        selectedYear.toString(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: selectedYear < currentYear
+                            ? () {
+                                setModalState(() => selectedYear++);
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        childAspectRatio: 1.5,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = DateTime(selectedYear, index + 1);
+                        final isSelected = month.month == selectedMonth.month && 
+                                        month.year == selectedMonth.year;
+                        final isPastMonth = month.isBefore(DateTime.now());
+
+                        return InkWell(
+                          onTap: isPastMonth ? () {
+                            setState(() {
+                              selectedMonth = month;
+                            });
+                            Navigator.pop(context);
+                            _loadAttendance();
+                          } : null,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF303030) : null,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected ? const Color(0xFF303030) : Colors.grey[300]!,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              DateFormat('MMM').format(month),
+                              style: TextStyle(
+                                color: isSelected 
+                                    ? Colors.white 
+                                    : !isPastMonth
+                                        ? Colors.grey[400]
+                                        : Colors.black,
+                                fontWeight: isSelected ? FontWeight.bold : null,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _loadAttendance() async {
     setState(() => isLoading = true);
     try {
@@ -60,9 +163,20 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          // Header with student name and month selector
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey[200]!,
+                  width: 1,
+                ),
+              ),
+            ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   widget.studentName,
@@ -71,31 +185,18 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Spacer(),
                 TextButton.icon(
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
                     DateFormat('MMMM yyyy').format(selectedMonth),
                   ),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedMonth,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                      initialDatePickerMode: DatePickerMode.year,
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        selectedMonth = DateTime(picked.year, picked.month);
-                      });
-                      _loadAttendance();
-                    }
-                  },
+                  onPressed: _showMonthPicker,
                 ),
               ],
             ),
           ),
+
+          // Attendance Records List
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())

@@ -32,6 +32,30 @@ class _CompletedPaymentsScreenState extends State<CompletedPaymentsScreen> {
    _loadPayments();
  }
 
+String _getMonthName(dynamic month) {
+  final months = [
+    'January', 'February', 'March', 'April', 
+    'May', 'June', 'July', 'August',
+    'September', 'October', 'November', 'December'
+  ];
+  
+  // Handle string input
+  int monthNumber;
+  if (month is String) {
+    monthNumber = int.tryParse(month) ?? 0;
+  } else if (month is int) {
+    monthNumber = month;
+  } else {
+    return 'Unknown Month';
+  }
+  
+  // Validate month number
+  if (monthNumber < 1 || monthNumber > 12) {
+    return 'Unknown Month';
+  }
+  
+  return months[monthNumber - 1];
+}
  Future<void> _loadPayments() async {
    setState(() => _isLoading = true);
    try {
@@ -106,109 +130,120 @@ class _CompletedPaymentsScreenState extends State<CompletedPaymentsScreen> {
                          itemCount: _payments.length,
                          itemBuilder: (context, index) {
                            final payment = _payments[index];
-                           return Card(
-                             margin: EdgeInsets.only(bottom: 12),
-                             shape: RoundedRectangleBorder(
-                               borderRadius: BorderRadius.circular(12),
-                             ),
-                             child: Padding(
-                               padding: const EdgeInsets.all(16.0),
-                               child: Column(
-                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                 children: [
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    Column(
+                          return Card(
+  margin: EdgeInsets.only(bottom: 12),
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Amount',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '₹${payment.amount}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            if (payment.isInvoiceGenerated == 1)
+              IconButton(
+                icon: Icon(Icons.download),
+                onPressed: () async {
+                  try {
+                    await PaymentService.downloadAndOpenInvoice(
+                      payment.invoicePath!,
+                    );
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString())),
+                      );
+                    }
+                  }
+                },
+              )
+            else
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Invoice Pending',
+                  style: TextStyle(
+                    color: Colors.orange[800],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        SizedBox(height: 8),
         Text(
-          'Amount',
+          payment.courseName,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          'Level ${payment.level}',
           style: TextStyle(
             color: Colors.grey[600],
             fontSize: 14,
           ),
         ),
+        SizedBox(height: 8),
+        // Add Payment Month and Year
+        if (payment.paymentMonth != null && payment.paymentYear != null)
+          Text(
+            'Payment for ${_getMonthName(payment.paymentMonth!)} ${payment.paymentYear}',
+            style: TextStyle(
+              color: Colors.grey[800],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        SizedBox(height: 4),
         Text(
-          '₹${payment.amount}',
+          payment.paymentDate != null 
+              ? 'Paid on ${DateFormat('MMM d, y').format(DateTime.parse(payment.paymentDate!))}' 
+              : 'Paid on ${DateFormat('MMM d, y').format(payment.createdAt)}',
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            color: Colors.grey[600],
+            fontSize: 14,
           ),
         ),
+        if (payment.invoiceNumber != null)
+          Text(
+            'Invoice: ${payment.invoiceNumber}',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
       ],
     ),
-    if (payment.isInvoiceGenerated == 1)
-      IconButton(
-        icon: Icon(Icons.download),
-        onPressed: () async {
-          try {
-            await PaymentService.downloadAndOpenInvoice(
-              payment.invoicePath!,
-            );
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.toString())),
-              );
-            }
-          }
-        },
-      )
-    else
-      Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          'Invoice Pending',
-          style: TextStyle(
-            color: Colors.orange[800],
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-  ],
-),
-                                   SizedBox(height: 8),
-                                   Text(
-                                     payment.courseName,
-                                     style: TextStyle(
-                                       fontWeight: FontWeight.w500,
-                                     ),
-                                   ),
-                                   Text(
-                                     'Level ${payment.level}',
-                                     style: TextStyle(
-                                       color: Colors.grey[600],
-                                       fontSize: 14,
-                                     ),
-                                   ),
-                                   SizedBox(height: 8),
-                                 Text(
-  payment.paymentDate != null 
-      ? 'Paid on ${DateFormat('MMM d, y').format(DateTime.parse(payment.paymentDate!))}' 
-      : 'Paid on ${DateFormat('MMM d, y').format(payment.createdAt)}',  // Use createdAt as fallback
-  style: TextStyle(
-    color: Colors.grey[600],
-    fontSize: 14,
   ),
-),
-                                   if (payment.invoiceNumber != null)
-                                     Text(
-                                       'Invoice: ${payment.invoiceNumber}',
-                                       style: TextStyle(
-                                         color: Colors.grey[600],
-                                         fontSize: 14,
-                                       ),
-                                     ),
-                                 ],
-                               ),
-                             ),
-                           );
+);
                          },
                        ),
            ),
