@@ -113,92 +113,10 @@ class LevelBox extends StatelessWidget {
   }
 }
 
-class SkillProgressCard extends StatelessWidget {
-  final String skillName;
-  final List<DailyProgress> progressEntries;
+/// --------------------
+/// Updated Overall Progress Tab
+/// --------------------
 
-  const SkillProgressCard({
-    Key? key,
-    required this.skillName,
-    required this.progressEntries,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final avgSupport = progressEntries
-        .map((e) => e.getLevelValue(e.supportLevel))
-        .reduce((a, b) => a + b) / progressEntries.length;
-    final avgInstruction = progressEntries
-        .map((e) => e.getLevelValue(e.instructionLevel))
-        .reduce((a, b) => a + b) / progressEntries.length;
-    final avgPerformance = progressEntries
-        .map((e) => e.getLevelValue(e.performanceLevel))
-        .reduce((a, b) => a + b) / progressEntries.length;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            skillName,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              ProgressIndicator(label: 'Support', value: avgSupport),
-              SizedBox(width: 8),
-              ProgressIndicator(label: 'Instruction', value: avgInstruction),
-              SizedBox(width: 8),
-              ProgressIndicator(label: 'Performance', value: avgPerformance),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProgressIndicator extends StatelessWidget {
-  final String label;
-  final double value;
-
-  const ProgressIndicator({
-    Key? key,
-    required this.label,
-  required this.value,
-  }) : super(key: key);
-
-  Color _getLevelColor(double value) {
-    if (value <= 1) return Colors.red;
-    if (value <= 2) return Colors.orange;
-    return Colors.green;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-          SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: value / 3,
-            backgroundColor: Colors.grey[200],
-            valueColor: AlwaysStoppedAnimation<Color>(_getLevelColor(value)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Add the ProgressSummaryScreen for overall progress
 class ProgressSummaryScreen extends StatefulWidget {
   final int childId;
   final String childName;
@@ -215,22 +133,27 @@ class ProgressSummaryScreen extends StatefulWidget {
 
 class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
   bool _isLoading = false;
-  ProgressSummary? _summary;
+  List<DailyProgress> _allProgress = [];
 
   @override
   void initState() {
     super.initState();
-    _loadSummary();
+    _loadProgress();
   }
 
-  Future<void> _loadSummary() async {
+  Future<void> _loadProgress() async {
     setState(() => _isLoading = true);
     try {
-      final summary = await StudentService.getProgressSummary(widget.childId);
-      setState(() => _summary = summary);
+      final progressList = await StudentService.getMonthlyProgress(
+        widget.childId,
+        DateTime.now(),
+      );
+      setState(() {
+        _allProgress = progressList;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load progress summary: $e')),
+        SnackBar(content: Text('Failed to load progress data: $e')),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -243,189 +166,189 @@ class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
       return Center(child: CircularProgressIndicator());
     }
 
-    if (_summary == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Failed to load progress summary'),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadSummary,
-              child: Text('Retry'),
-            ),
-          ],
-        ),
-      );
+    if (_allProgress.isEmpty) {
+      return const Center(child: Text('No progress data available'));
     }
 
-    return ListView(
-      padding: EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: _loadProgress,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildMonthOverview(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthOverview() {
+    // Group evaluations by day.
+    final Map<DateTime, List<DailyProgress>> days = {};
+    for (var progress in _allProgress) {
+      final day = DateTime(
+        progress.date.year,
+        progress.date.month,
+        progress.date.day,
+      );
+      days.putIfAbsent(day, () => []).add(progress);
+    }
+    final sortedDays = days.keys.toList()..sort();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.insights,
+                  color: Colors.deepPurple,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Month Overview',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '${_allProgress.length} evaluation sessions on ${sortedDays.length} days',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Reuse the SkillsSummary widget to show a summary by skills.
+            SkillsSummary(events: _allProgress),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// SkillsSummary widget from the calendar screen can be reused here.
+class SkillsSummary extends StatelessWidget {
+  final List<DailyProgress> events;
+
+  const SkillsSummary({
+    Key? key,
+    required this.events,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Group events by skill name.
+    final skillGroups = events.fold<Map<String, List<DailyProgress>>>(
+      {},
+      (map, event) {
+        map[event.skillName] = (map[event.skillName] ?? [])..add(event);
+        return map;
+      },
+    );
+
+    if (skillGroups.isEmpty) return SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildOverallProgress(),
-        SizedBox(height: 16),
-        _buildAIAnalysis(),
-        SizedBox(height: 16),
-        _buildImprovementsCard(),
-        SizedBox(height: 16),
-        _buildAreasForFocusCard(),
-        SizedBox(height: 16),
-        _buildRecommendationsCard(),
+        const Text(
+          'Skills Progress',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...skillGroups.entries.map((entry) => _buildSkillProgressBar(context, entry.key, entry.value)).toList(),
       ],
     );
   }
 
-  Widget _buildOverallProgress() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            SizedBox(
-              height: 100,
-              width: 100,
-              child: CircularProgressIndicator(
-                value: _summary!.overallProgress / 100,
-                backgroundColor: Colors.grey[200],
-                strokeWidth: 10,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Overall Progress',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '${_summary!.overallProgress.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  Widget _buildSkillProgressBar(BuildContext context, String skillName, List<DailyProgress> skillEvents) {
+    // Calculate average values (this example assumes a numeric conversion).
+    final avgSupport = skillEvents
+        .map((e) => _getLevelValue(e.supportLevel))
+        .reduce((a, b) => a + b) / skillEvents.length;
+    final avgInstruction = skillEvents
+        .map((e) => _getLevelValue(e.instructionLevel))
+        .reduce((a, b) => a + b) / skillEvents.length;
+    final avgPerformance = skillEvents
+        .map((e) => _getLevelValue(e.performanceLevel))
+        .reduce((a, b) => a + b) / skillEvents.length;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            skillName,
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          _buildProgressIndicator('Support', avgSupport, context),
+          const SizedBox(height: 4),
+          _buildProgressIndicator('Instruction', avgInstruction, context),
+          const SizedBox(height: 4),
+          _buildProgressIndicator('Performance', avgPerformance, context),
+        ],
       ),
     );
   }
 
-  Widget _buildAIAnalysis() {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.auto_awesome),
-                SizedBox(width: 8),
-                Text(
-                  'AI Analysis',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+  Widget _buildProgressIndicator(String label, double value, BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
             ),
-            SizedBox(height: 16),
-            Text(
-              _summary!.aiAnalysis,
-              style: TextStyle(
-                fontSize: 16,
-                height: 1.5,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildImprovementsCard() {
-    return _buildListCard(
-      title: 'Key Improvements',
-      icon: Icons.trending_up,
-      items: _summary!.keyImprovements,
-      color: Colors.green,
-    );
-  }
-
-  Widget _buildAreasForFocusCard() {
-    return _buildListCard(
-      title: 'Areas for Focus',
-      icon: Icons.track_changes,
-      items: _summary!.areasForFocus,
-      color: Colors.orange,
-    );
-  }
-
-  Widget _buildRecommendationsCard() {
-    return _buildListCard(
-      title: 'Recommendations',
-      icon: Icons.lightbulb_outline,
-      items: _summary!.recommendations,
-      color: Colors.purple,
-    );
-  }
-
-  Widget _buildListCard({
-    required String title,
-    required IconData icon,
-    required List<String> items,
-    required MaterialColor color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color),
-                SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            ...items.map((item) => Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.circle, size: 8, color: color),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
+        Expanded(
+          child: LinearProgressIndicator(
+            value: value / 10, // Assuming a maximum value of 10
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(_getLevelColor(value)),
+            minHeight: 8,
+          ),
         ),
-      ),
+      ],
     );
+  }
+
+  double _getLevelValue(String level) {
+    switch (level.toLowerCase()) {
+      case 'low':
+        return 3.0;
+      case 'medium':
+        return 6.0;
+      case 'high':
+        return 9.0;
+      default:
+        return 1.0;
+    }
+  }
+
+  Color _getLevelColor(double value) {
+    if (value < 4) return Colors.red;
+    if (value < 7) return Colors.orange;
+    return Colors.green;
   }
 }

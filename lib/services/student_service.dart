@@ -126,6 +126,56 @@ static Future<List<AttendanceRecord>> getAttendanceRecords(
     throw Exception('Failed to fetch attendance records: $e');
   }
 }
+// Get months with available progress data
+static Future<List<DateTime>> getAvailableProgressMonths(int studentId) async {
+  try {
+    final token = await _getAuthToken();
+    if (token == null) throw Exception('Authentication token not found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/student/progress/$studentId/available-months'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      final List<dynamic> monthsData = data['data'];
+      return monthsData
+          .map((monthData) => DateTime.parse(monthData['month']))
+          .toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch available months');
+    }
+  } catch (e) {
+    print('Error fetching available months: $e');
+    // Return only the current month if there's an error
+    return [DateTime(DateTime.now().year, DateTime.now().month)];
+  }
+}
+
+// If the API endpoint doesn't exist yet, you can use this mock implementation for testing
+static Future<List<DateTime>> getAvailableProgressMonthsMock(int studentId) async {
+  // Simulate network delay
+  await Future.delayed(Duration(milliseconds: 800));
+  
+  // Return the last 6 months
+  final now = DateTime.now();
+  final months = <DateTime>[];
+  
+  for (int i = 0; i < 6; i++) {
+    final month = DateTime(now.year, now.month - i);
+    months.add(month);
+  }
+  
+  // Add some months from previous year
+  months.add(DateTime(now.year - 1, 12));
+  months.add(DateTime(now.year - 1, 11));
+  months.add(DateTime(now.year - 1, 8));
+  
+  return months;
+}
 // Update the method signature to include the return type
 static Future<GalleryResponse> getGalleryPhotos(int studentId) async {
   try {

@@ -1,13 +1,10 @@
-import 'dart:io';
-
-import 'package:dio/dio.dart';
+// lib/screens/gallery_screen.dart
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import '../../models/gallery.dart';
-import '../../services/student_service.dart';
 import 'package:intl/intl.dart';
+import 'package:my_ableaura/models/gallery_image.dart';
+import 'package:my_ableaura/services/gallery_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:open_file/open_file.dart';
 
 class GalleryScreen extends StatefulWidget {
   final int studentId;
@@ -26,39 +23,34 @@ class GalleryScreen extends StatefulWidget {
 class _GalleryScreenState extends State<GalleryScreen> {
   bool _isLoading = true;
   String? _error;
-  List<GalleryPhoto> _photos = [];
-  bool _hasMore = false;
+  List<FranchiseGallery> _galleries = [];
 
   @override
   void initState() {
     super.initState();
-    _loadPhotos();
+    _loadGalleries();
   }
 
-  Future<void> _loadPhotos() async {
+  Future<void> _loadGalleries() async {
     try {
-      final response = await StudentService.getGalleryPhotos(widget.studentId);
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+      
+      final galleries = await GalleryService.getStudentGallery(widget.studentId);
+      
       if (!mounted) return;
       
       setState(() {
-        _photos = response.photos;
-        _hasMore = response.currentPage < response.lastPage;
+        _galleries = galleries;
         _isLoading = false;
-        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
       
-      String errorMessage = 'Something went wrong. Please try again.';
-      
-      if (e.toString().contains('No query results')) {
-        errorMessage = 'No images found!';
-      } else if (e.toString().contains('500')) {
-        errorMessage = 'Unable to load gallery at the moment';
-      }
-      
       setState(() {
-        _error = errorMessage;
+        _error = e.toString();
         _isLoading = false;
       });
     }
@@ -68,7 +60,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.studentName}\'s Gallery'),
+        title: Text('Gallery'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -76,134 +68,283 @@ class _GalleryScreenState extends State<GalleryScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _error!.contains('No images') 
-                            ? Icons.photo_library_outlined 
-                            : Icons.error_outline,
-                        size: 64,
-                        color: _error!.contains('No images') 
-                            ? Colors.grey 
-                            : Colors.red[300],
+              ? _buildErrorState()
+              : _galleries.isEmpty
+                  ? _buildEmptyState()
+                  : RefreshIndicator(
+                      onRefresh: _loadGalleries,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _galleries.length,
+                        itemBuilder: (context, index) {
+                          return _buildGalleryCard(_galleries[index]);
+                        },
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _error!.contains('No images') 
-                              ? Colors.grey[600] 
-                              : Colors.red[700],
+                    ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.red[300],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load gallery',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _error ?? 'Unknown error',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.red[700],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadGalleries,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF303030),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.photo_library_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No gallery images found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Check back later for updates',
+            style: TextStyle(
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGalleryCard(FranchiseGallery gallery) {
+    // Format date for display
+    String formattedDate = '';
+    try {
+      final DateTime date = DateTime.parse(gallery.createdAt);
+      formattedDate = DateFormat.yMMMMd().format(date);
+    } catch (e) {
+      formattedDate = gallery.createdAt;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 20),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  gallery.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  gallery.franchiseName,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formattedDate,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+                if (gallery.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    gallery.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Image grid
+          _buildImageGrid(gallery.images, context),
+
+          // Footer
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Text(
+              '${gallery.images.length} photos',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageGrid(List<GalleryImage> images, BuildContext context) {
+    // Limit preview to 4 images, with a "View All" overlay if more
+    final displayImages = images.length > 4 ? images.sublist(0, 4) : images;
+    final hasMore = images.length > 4;
+    final moreCount = images.length - 4;
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      mainAxisSpacing: 2,
+      crossAxisSpacing: 2,
+      children: [
+        ...displayImages.asMap().entries.map((entry) {
+          final index = entry.key;
+          final image = entry.value;
+          bool showMoreOverlay = hasMore && index == 3;
+
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FullScreenGallery(
+                    images: images,
+                    initialIndex: index,
+                    galleryTitle: _galleries.firstWhere(
+                      (gallery) => gallery.images.contains(image),
+                      orElse: () => FranchiseGallery(
+                        title: '',
+                        description: '',
+                        franchiseId: 0,
+                        franchiseName: '',
+                        createdAt: '',
+                        images: [],
+                        imageCount: 0,
+                      ),
+                    ).title,
+                  ),
+                ),
+              );
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: image.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+                if (showMoreOverlay)
+                  Container(
+                    color: Colors.black.withOpacity(0.7),
+                    child: Center(
+                      child: Text(
+                        '+$moreCount more',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      if (!_error!.contains('No images'))
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF303030),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: _loadPhotos,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadPhotos,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(8),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
                     ),
-                    itemCount: _photos.length,
-                    itemBuilder: (context, index) {
-                      final photo = _photos[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => _FullScreenImage(
-                                photo: photo,
-                                allPhotos: _photos,
-                                initialIndex: index,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Hero(
-                          tag: photo.url,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey[200],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                photo.url,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
-                                          : null,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.error_outline,
-                                      color: Colors.red,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }
 
-// Full screen image widget within the same file
-class _FullScreenImage extends StatefulWidget {
-  final GalleryPhoto photo;
-  final List<GalleryPhoto> allPhotos;
+class FullScreenGallery extends StatefulWidget {
+  final List<GalleryImage> images;
   final int initialIndex;
+  final String galleryTitle;
 
-  const _FullScreenImage({
-    required this.photo,
-    required this.allPhotos,
+  const FullScreenGallery({
+    Key? key,
+    required this.images,
     required this.initialIndex,
-  });
+    required this.galleryTitle,
+  }) : super(key: key);
 
   @override
-  State<_FullScreenImage> createState() => _FullScreenImageState();
+  State<FullScreenGallery> createState() => _FullScreenGalleryState();
 }
 
-class _FullScreenImageState extends State<_FullScreenImage> {
+class _FullScreenGalleryState extends State<FullScreenGallery> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -218,267 +359,88 @@ class _FullScreenImageState extends State<_FullScreenImage> {
     super.dispose();
   }
 
- Future<bool> _checkAndRequestStoragePermission() async {
-  try {
-    // First check current status
-    PermissionStatus storageStatus = await Permission.storage.status;
-    PermissionStatus photosStatus = await Permission.photos.status;
+  Future<void> _downloadImage() async {
+    if (_isDownloading) return;
     
-    print('Initial status - Storage: $storageStatus, Photos: $photosStatus'); // Debug log
-
-    // If already granted, return true
-    if (storageStatus.isGranted || photosStatus.isGranted) {
-      return true;
-    }
-
-    // Show explanation dialog
-    final shouldRequest = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Storage Permission Required'),
-        content: const Text('We need storage permission to save images to your device. Please grant the permission in the next dialog.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context, true);
-            },
-            child: const Text('CONTINUE'),
-          ),
-        ],
-      ),
-    ) ?? false;
-
-    if (!shouldRequest) return false;
-
-    // Directly request both permissions
-    print('Requesting permissions...'); // Debug log
+    setState(() {
+      _isDownloading = true;
+    });
     
-    // Request storage permission first
-    storageStatus = await Permission.storage.request();
-    print('Storage permission after request: $storageStatus'); // Debug log
-
-    // For Android 13+, also request photos permission
-    photosStatus = await Permission.photos.request();
-    print('Photos permission after request: $photosStatus'); // Debug log
-
-    // Check if either permission was granted
-    if (storageStatus.isGranted || photosStatus.isGranted) {
-      return true;
-    }
-
-    // Handle permanently denied case
-    if (storageStatus.isPermanentlyDenied || photosStatus.isPermanentlyDenied) {
-      if (!mounted) return false;
-
-      final openSettings = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Permission Required'),
-          content: const Text('Storage permission is permanently denied. Please enable it in app settings.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('OPEN SETTINGS'),
-            ),
-          ],
-        ),
-      ) ?? false;
-
-      if (openSettings) {
-        await openAppSettings();
-        // Re-check permission after returning from settings
-        final finalStatus = await Permission.storage.status;
-        return finalStatus.isGranted;
-      }
-    }
-
-    return false;
-  } catch (e) {
-    print('Error in permission request: $e'); // Debug log
-    return false;
-
-    
-  }
-}
-
-Future<bool> _requestPermissions() async {
-  // Request both storage and photos permissions
-  Map<Permission, PermissionStatus> statuses = await [
-    Permission.storage,
-    Permission.photos,
-  ].request();
-
-  // Check if both permissions are granted
-  return statuses[Permission.storage]!.isGranted || 
-         statuses[Permission.photos]!.isGranted;
-}
-
-Future<bool> _requestStoragePermission() async {
-  final status = await Permission.storage.status;
-  
-  if (status.isGranted) {
-    return true;
-  }
-
-  if (status.isPermanentlyDenied) {
-    // Show dialog to open settings
-    final openSettings = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Storage Permission Required'),
-        content: const Text(
-          'Storage permission is required to save images to your device. Please enable it in settings.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCEL'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('OPEN SETTINGS'),
-          ),
-        ],
-      ),
-    );
-
-    if (openSettings == true) {
-      await openAppSettings();
-      // Check if permission was granted after returning from settings
-      final newStatus = await Permission.storage.status;
-      return newStatus.isGranted;
-    }
-    return false;
-  }
-
-  // Request permission
-  final result = await Permission.storage.request();
-  return result.isGranted;
-}
-
-Future<void> _downloadImage() async {
-  try {
-    // Check permissions first
-    final hasPermission = await _checkAndRequestStoragePermission();
-    
-    if (!hasPermission) {
+    try {
+      final currentImage = widget.images[_currentIndex];
+      
+      // Show download started snackbar
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Storage permission is required to save images'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Show loading indicator
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();  // Clear any existing snackbars
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              strokeWidth: 2,
-            ),
-            SizedBox(width: 16),
-            Text('Downloading image...'),
-          ],
-        ),
-        duration: Duration(seconds: 1),
-      ),
-    );
-    
-    // Download the image
-    final savedFilePath = await StudentService.downloadGalleryPhoto(
-      widget.allPhotos[_currentIndex].url,
-    );
-
-    if (!mounted) return;
-
-    // Clear the loading snackbar
-    ScaffoldMessenger.of(context).clearSnackBars();
-
-    // Show success message with Open button
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Text('Image saved successfully'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await OpenFile.open(savedFilePath);
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Could not open the image: ${e.toString()}'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                'OPEN',
-                style: TextStyle(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: 16),
+              Text('Downloading image...'),
+            ],
+          ),
+          duration: Duration(seconds: 1),
         ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+      );
+      
+      final filePath = await GalleryService.downloadGalleryPhoto(currentImage.imageUrl);
+      
+      if (!mounted) return;
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 16),
+              const Expanded(child: Text('Image saved')),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    await OpenFile.open(filePath);
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Could not open image: $e')),
+                    );
+                  }
+                },
+                child: const Text(
+                  'VIEW',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
         ),
-        margin: const EdgeInsets.all(8),
-        duration: const Duration(seconds: 4),
-        backgroundColor: Colors.green,
-      ),
-    );
-  } catch (e) {
-    print('Download error: $e');  // Debug log
-    if (!mounted) return;
-    
-    // Clear any existing snackbars
-    ScaffoldMessenger.of(context).clearSnackBars();
-    
-    // Show error message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 16),
-            Expanded(child: Text('Failed to download image: ${e.toString()}')),
-          ],
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download: $e'),
+          backgroundColor: Colors.red,
         ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -487,104 +449,122 @@ Future<void> _downloadImage() async {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          '${_currentIndex + 1} of ${widget.allPhotos.length}',
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.galleryTitle,
+              style: const TextStyle(fontSize: 16),
+            ),
+            Text(
+              '${_currentIndex + 1} of ${widget.images.length}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
         ),
         actions: [
-          Text(
-            DateFormat('MMMM d, y').format(widget.allPhotos[_currentIndex].date),
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              // Implement share functionality
+            },
           ),
-          const SizedBox(width: 16),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: widget.allPhotos.length,
-              onPageChanged: (index) {
-                setState(() => _currentIndex = index);
-              },
-              itemBuilder: (context, index) {
-                final photo = widget.allPhotos[index];
-                return InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: Hero(
-                    tag: photo.url,
-                    child: Image.network(
-                      photo.url,
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: progress.expectedTotalBytes != null
-                                ? progress.cumulativeBytesLoaded /
-                                    progress.expectedTotalBytes!
-                                : null,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.images.length,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        itemBuilder: (context, index) {
+          return InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 3.0,
+            child: CachedNetworkImage(
+              imageUrl: widget.images[index].imageUrl,
+              fit: BoxFit.contain,
+              placeholder: (context, url) => const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                ),
+              ),
+              errorWidget: (context, url, error) => Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 60,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load image',
+                    style: TextStyle(color: Colors.red[300]),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.black,
+        height: 80,
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // Categories chip if any
+              if (widget.images[_currentIndex].categories.isNotEmpty)
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: widget.images[_currentIndex].categories.map((category) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Chip(
+                            label: Text(category),
+                            backgroundColor: Colors.grey[800],
+                            labelStyle: const TextStyle(color: Colors.white),
                           ),
                         );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 48,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Failed to load image',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ],
-                        );
-                      },
+                      }).toList(),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          // Download button section
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.black,
-            child: SafeArea(
-              child: ElevatedButton.icon(
-                onPressed: _downloadImage,
-                icon: const Icon(Icons.download),
-                label: const Text('Download Image'),
+                ),
+              
+              // Download button
+              ElevatedButton.icon(
+                onPressed: _isDownloading ? null : _downloadImage,
+                icon: _isDownloading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.download),
+                label: Text(_isDownloading ? 'Downloading...' : 'Download'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  disabledBackgroundColor: Colors.grey,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -42,21 +42,7 @@ class HomeScreen extends StatelessWidget {
   // Your existing _getMenuItems method stays exactly the same
 List<MenuItem> _getMenuItems(BuildContext context) {
     return [
-      MenuItem(
-        title: 'Your Profile',
-        icon: Icons.person_outline,
-        color: Colors.blue,
-        subtitle: 'View Profile Details',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ProfileScreen(),
-            ),
-          );
-        },
-      ),
-      MenuItem(
+       MenuItem(
         title: 'Attendance',
         icon: Icons.calendar_today_outlined,
         color: Colors.blue,
@@ -72,7 +58,57 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           );
         },
       ),
-      MenuItem(
+        MenuItem(
+        title: 'Progress Panel',
+        icon: Icons.trending_up,
+        color: Colors.red,
+        subtitle: 'Track skill development',
+        onTap: () async {
+          try {
+            final response = await StudentService.getChildrenList();
+            if (!context.mounted) return;
+
+            if (response.data.childCount == 1) {
+              final child = response.data.childDetails.first;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProgressView(
+                    childId: child.childId,
+                    childName: child.name,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChildrenListScreen(
+                    navigatorKey: navigatorKey,
+                    onChildSelected: (childId, childName) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProgressView(
+                            childId: childId,
+                            childName: childName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+          } catch (e) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error loading children: $e')),
+            );
+          }
+        },
+      ),
+       MenuItem(
         title: 'My Payments',
         icon: Icons.payment_outlined,
         color: Colors.purple,
@@ -124,58 +160,55 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           }
         },
       ),
-      MenuItem(
-        title: 'Progress Panel',
-        icon: Icons.trending_up,
-        color: Colors.red,
-        subtitle: 'Track skill development',
-        onTap: () async {
-          try {
-            final response = await StudentService.getChildrenList();
-            if (!context.mounted) return;
-
-            if (response.data.childCount == 1) {
-              final child = response.data.childDetails.first;
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProgressView(
-                    childId: child.childId,
-                    childName: child.name,
-                  ),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChildrenListScreen(
-                    navigatorKey: navigatorKey,
-                    onChildSelected: (childId, childName) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProgressView(
-                            childId: childId,
-                            childName: childName,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            }
-          } catch (e) {
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error loading children: $e')),
-            );
-          }
+        MenuItem(
+        title: 'My Referrals',
+        icon: Icons.people_outline,
+        color: Colors.orange,
+        subtitle: 'Refer friends and earn',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReferralScreen(navigatorKey: navigatorKey),
+            ),
+          );
         },
       ),
       MenuItem(
-        title: 'My Child\'s Gallery',
+        title: 'Feedback',
+        icon: Icons.feedback_outlined,
+        color: Colors.purple,
+        subtitle: 'Share your thoughts with us',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FeedbackMenuScreen(
+                navigatorKey: navigatorKey,
+              ),
+            ),
+          );
+        },
+      ),
+      MenuItem(
+        title: 'Your Profile',
+        icon: Icons.person_outline,
+        color: Colors.blue,
+        subtitle: 'View Profile Details',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ProfileScreen(),
+            ),
+          );
+        },
+      ),
+     
+     
+    
+      MenuItem(
+        title: 'Gallery',
         icon: Icons.photo_library_outlined,
         color: Colors.teal,
         subtitle: 'View photos and videos',
@@ -274,36 +307,7 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           }
         },
       ),
-      MenuItem(
-        title: 'My Referrals',
-        icon: Icons.people_outline,
-        color: Colors.orange,
-        subtitle: 'Refer friends and earn',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ReferralScreen(navigatorKey: navigatorKey),
-            ),
-          );
-        },
-      ),
-      MenuItem(
-        title: 'Feedback',
-        icon: Icons.feedback_outlined,
-        color: Colors.purple,
-        subtitle: 'Share your thoughts with us',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FeedbackMenuScreen(
-                navigatorKey: navigatorKey,
-              ),
-            ),
-          );
-        },
-      ),
+    
       MenuItem(
         title: 'Connect to WhatsApp',
         icon: Icons.chat_bubble_outline,

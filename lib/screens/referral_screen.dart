@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../services/referral_service.dart';
 import '../models/referral_detail.dart';
+import 'dart:io';
 
 class ReferralScreen extends StatefulWidget {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -21,6 +23,7 @@ class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProvid
   late TabController _tabController;
   bool _isLoading = false;
   String? _referralCode;
+   String? _shortUrl;  // Add this
   Map<String, dynamic>? _stats;
 
   @override
@@ -39,6 +42,7 @@ class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProvid
       if (mounted) {
         setState(() {
           _referralCode = response['referral_code'];
+           _shortUrl = response['short_url'];
           _stats = statsResponse['data'];
           _isLoading = false;
         });
@@ -54,26 +58,40 @@ class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProvid
   }
 
   Future<void> _shareReferralCode() async {
-    if (_referralCode == null) return;
-
-     // Use the new method to get the referral URL
-  final referralUrl = ReferralService.getReferralUrl(_referralCode!);
-
-    final String shareText = '''
-Join Sports Academy and get exclusive benefits! 🏃‍♂️
-
-Use my referral code: $_referralCode
-
-- Get your child trained by expert coaches
-- Professional sports training programs
-- Safe and secure environment
-
-Click here to join: $referralUrl
-''';
-
+    if (_referralCode == null || _shortUrl == null) return;
 
     try {
-      await Share.share(shareText);
+      final String shareText = '''
+Join Ableaura Sports Academy!
+
+Transform your child's sporting journey with Ableaura's expert coaching and personalized programs.
+
+🏆 Expert Coach Training
+🎯 Professional Sports Programs
+🛡️ Safe Learning Environment
+⭐ Personalized Development
+📱 Real-time Progress Tracking
+
+Schedule your FREE consultation call now!
+👉 $_shortUrl
+
+Join the Ableaura family today and give your child the advantage they deserve!
+''';
+
+      // Get the image from assets and save to temporary file
+      final bytes = await rootBundle.load('assets/whatsapp-share-img.jpg');
+      final tempDir = await getTemporaryDirectory();
+      final tempImageFile = File('${tempDir.path}/referral_image.jpg');
+      await tempImageFile.writeAsBytes(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes)
+      );
+
+      // Share both image and text
+      await Share.shareFiles(
+        [tempImageFile.path],
+        text: shareText,
+      );
+
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +202,7 @@ Click here to join: $referralUrl
             const SizedBox(height: 16),
             _buildRewardPoint('Get 1 free session for each referral'),
             _buildRewardPoint('No limit on referrals'),
-            _buildRewardPoint('Free session after child completes 1 month'),
+            _buildRewardPoint('Free session after your referral completes 1 month'),
           ],
         ),
       ),
@@ -283,12 +301,13 @@ Click here to join: $referralUrl
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      icon: const Icon(Icons.share),
+      icon: const Icon(Icons.share, color: Colors.white), // Added color here
       label: const Text(
         'Share with Friends',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
+          color: Colors.white, // Added this line
         ),
       ),
     );
