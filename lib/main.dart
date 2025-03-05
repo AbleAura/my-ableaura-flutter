@@ -6,30 +6,36 @@ import 'package:my_ableaura/screens/referral_screen.dart';
 import 'package:my_ableaura/screens/whatsapp_channels_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/feedback/feedback_menu_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'config/build_config.dart';
 import 'screens/payments/payments_flow.dart';
 import 'services/notification_service.dart';
+
 // Global navigator key to be used across the app
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-    // Handle initial URI if app was opened from a deep link
+  // Handle initial URI if app was opened from a deep link
   try {
     print('Flutter initialized');
 
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     await NotificationService.initialize(navigatorKey);
 
-    final flavor = const String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev') == 'prod'
-        ? BuildFlavor.production
-        : BuildFlavor.development;
-    
+    final flavor =
+        const String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev') ==
+                'prod'
+            ? BuildFlavor.production
+            : BuildFlavor.development;
+
     await BuildConfig.init(flavor: flavor);
-    
+
     runApp(const MyApp());
   } catch (e) {
     print('Initialization error: $e');
@@ -42,7 +48,7 @@ class ErrorApp extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
 
   const ErrorApp({
-    Key? key, 
+    Key? key,
     required this.error,
     required this.navigatorKey,
   }) : super(key: key);
@@ -67,7 +73,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: BuildConfig.isDevelopment ? 'Sports Academy Dev' : 'Sports Academy',
+      title:
+          BuildConfig.isDevelopment ? 'Sports Academy Dev' : 'Sports Academy',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: Colors.white,
@@ -77,36 +84,32 @@ class MyApp extends StatelessWidget {
         switch (settings.name) {
           case '/':
             return MaterialPageRoute(
-              builder: (_) => SplashScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => SplashScreen(navigatorKey: navigatorKey));
           case '/home':
             return MaterialPageRoute(
-              builder: (_) => HomeScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => HomeScreen(navigatorKey: navigatorKey));
           case '/attendance':
             return MaterialPageRoute(
-              builder: (_) => ChildrenListScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => ChildrenListScreen(navigatorKey: navigatorKey));
           case '/notifications':
             return MaterialPageRoute(
-              builder: (_) => NotificationsScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) =>
+                    NotificationsScreen(navigatorKey: navigatorKey));
           case '/channels':
             return MaterialPageRoute(
-              builder: (_) => WhatsAppChannelsScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) =>
+                    WhatsAppChannelsScreen(navigatorKey: navigatorKey));
           case '/payments':
             return MaterialPageRoute(
               builder: (_) => PaymentsFlow(navigatorKey: navigatorKey),
             );
           case '/referral':
             return MaterialPageRoute(
-              builder: (_) => ReferralScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => ReferralScreen(navigatorKey: navigatorKey));
           case '/progress':
             return MaterialPageRoute(
-              builder: (_) => ProgressReportScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) =>
+                    ProgressReportScreen(navigatorKey: navigatorKey));
           case '/addresses':
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
@@ -123,20 +126,18 @@ class MyApp extends StatelessWidget {
                 ),
               ),
             );
-            case '/feedback':
-  return MaterialPageRoute(
-    builder: (_) => FeedbackMenuScreen(
-      navigatorKey: navigatorKey,
-    ),
-  );
+          case '/feedback':
+            return MaterialPageRoute(
+              builder: (_) => FeedbackMenuScreen(
+                navigatorKey: navigatorKey,
+              ),
+            );
           case '/login':
             return MaterialPageRoute(
-              builder: (_) => LoginScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => LoginScreen(navigatorKey: navigatorKey));
           default:
             return MaterialPageRoute(
-              builder: (_) => SplashScreen(navigatorKey: navigatorKey)
-            );
+                builder: (_) => SplashScreen(navigatorKey: navigatorKey));
         }
       },
     );
@@ -169,7 +170,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
-      
+
       if (!mounted) return;
 
       if (token != null) {
