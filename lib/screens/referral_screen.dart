@@ -19,11 +19,12 @@ class ReferralScreen extends StatefulWidget {
   _ReferralScreenState createState() => _ReferralScreenState();
 }
 
-class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProviderStateMixin {
+class _ReferralScreenState extends State<ReferralScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
   String? _referralCode;
-   String? _shortUrl;  // Add this
+  String? _shortUrl; // Add this
   Map<String, dynamic>? _stats;
 
   @override
@@ -38,11 +39,11 @@ class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProvid
     try {
       final response = await ReferralService.generateCode();
       final statsResponse = await ReferralService.getReferralStats();
-      
+
       if (mounted) {
         setState(() {
           _referralCode = response['referral_code'];
-           _shortUrl = response['short_url'];
+          _shortUrl = response['short_url'];
           _stats = statsResponse['data'];
           _isLoading = false;
         });
@@ -83,15 +84,13 @@ Join the Ableaura family today and give your child the advantage they deserve!
       final tempDir = await getTemporaryDirectory();
       final tempImageFile = File('${tempDir.path}/referral_image.jpg');
       await tempImageFile.writeAsBytes(
-        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes)
-      );
-
+          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
+      XFile xfile = XFile(tempImageFile.path);
       // Share both image and text
-      await Share.shareFiles(
-        [tempImageFile.path],
+      await Share.shareXFiles(
+        [xfile],
         text: shareText,
       );
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -202,7 +201,8 @@ Join the Ableaura family today and give your child the advantage they deserve!
             const SizedBox(height: 16),
             _buildRewardPoint('Get 1 free session for each referral'),
             _buildRewardPoint('No limit on referrals'),
-            _buildRewardPoint('Free session after your referral completes 1 month'),
+            _buildRewardPoint(
+                'Free session after your referral completes 1 month'),
           ],
         ),
       ),
@@ -350,7 +350,8 @@ Join the Ableaura family today and give your child the advantage they deserve!
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -383,7 +384,7 @@ Join the Ableaura family today and give your child the advantage they deserve!
     );
   }
 
-Widget _buildMyReferralsTab() {
+  Widget _buildMyReferralsTab() {
     return FutureBuilder<List<ReferralDetail>>(
       future: ReferralService.getReferrals(),
       builder: (context, snapshot) {
@@ -455,80 +456,82 @@ Widget _buildMyReferralsTab() {
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: referrals.length,
-            itemBuilder: (context, index) => _buildReferralCard(referrals[index]),
+            itemBuilder: (context, index) =>
+                _buildReferralCard(referrals[index]),
           ),
         );
       },
     );
-}
+  }
 
-Widget _buildReferralCard(ReferralDetail referral) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 12),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: ListTile(
-      contentPadding: const EdgeInsets.all(16),
-      title: Text(
-        referral.name,
-        style: const TextStyle(fontWeight: FontWeight.bold),
+  Widget _buildReferralCard(ReferralDetail referral) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Text(referral.phone),
-          Text(
-            'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
-          if (referral.meetingScheduledAt != null)  // Added
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        title: Text(
+          referral.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(referral.phone),
             Text(
-              'Meeting Scheduled: ${DateFormat('MMM d, yyyy').format(referral.meetingScheduledAt!)}',
+              'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
-          if (referral.registrationDate != null)
-            Text(
-              'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          if (referral.paymentCompletionDate != null)
-            Text(
-              'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-        ],
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _buildStatusChip(referral.displayStatus, referral.statusColor),
-          if (referral.rewardStatus == 'credited')
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
+            if (referral.meetingScheduledAt != null) // Added
+              Text(
+                'Meeting Scheduled: ${DateFormat('MMM d, yyyy').format(referral.meetingScheduledAt!)}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+            if (referral.registrationDate != null)
+              Text(
+                'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
-              child: const Text(
-                'Session Credited',
-                style: TextStyle(
-                  color: Colors.green,
-                  fontSize: 12,
+            if (referral.paymentCompletionDate != null)
+              Text(
+                'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildStatusChip(referral.displayStatus, referral.statusColor),
+            if (referral.rewardStatus == 'credited')
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Session Credited',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 12,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildStatusChip(String status, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -536,7 +539,8 @@ Widget _buildReferralCard(ReferralDetail referral) {
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(status,
+      child: Text(
+        status,
         style: TextStyle(
           color: color,
           fontSize: 12,
