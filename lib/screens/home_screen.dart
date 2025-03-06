@@ -40,9 +40,9 @@ class HomeScreen extends StatelessWidget {
   }) : super(key: key);
 
   // Your existing _getMenuItems method stays exactly the same
-List<MenuItem> _getMenuItems(BuildContext context) {
+  List<MenuItem> _getMenuItems(BuildContext context) {
     return [
-       MenuItem(
+      MenuItem(
         title: 'Attendance',
         icon: Icons.calendar_today_outlined,
         color: Colors.blue,
@@ -58,7 +58,7 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           );
         },
       ),
-        MenuItem(
+      MenuItem(
         title: 'Progress Panel',
         icon: Icons.trending_up,
         color: Colors.red,
@@ -108,7 +108,7 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           }
         },
       ),
-       MenuItem(
+      MenuItem(
         title: 'My Payments',
         icon: Icons.payment_outlined,
         color: Colors.purple,
@@ -160,7 +160,7 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           }
         },
       ),
-        MenuItem(
+      MenuItem(
         title: 'My Referrals',
         icon: Icons.people_outline,
         color: Colors.orange,
@@ -204,9 +204,6 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           );
         },
       ),
-     
-     
-    
       MenuItem(
         title: 'Gallery',
         icon: Icons.photo_library_outlined,
@@ -307,7 +304,6 @@ List<MenuItem> _getMenuItems(BuildContext context) {
           }
         },
       ),
-    
       MenuItem(
         title: 'Connect to WhatsApp',
         icon: Icons.chat_bubble_outline,
@@ -371,40 +367,76 @@ List<MenuItem> _getMenuItems(BuildContext context) {
     );
   }
 
-  double _calculateAspectRatio(double screenWidth) {
-    if (screenWidth > 600) {
-      return 1.4; // For tablets
-    } else if (screenWidth > 400) {
+  // Enhanced aspect ratio calculation for better tablet layout
+  double _calculateAspectRatio(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final isTablet = size.shortestSide >= 600;
+    final orientation = MediaQuery.of(context).orientation;
+    
+    // Adjust aspect ratio based on device type and orientation
+    if (isTablet) {
+      return orientation == Orientation.landscape ? 1.5 : 1.3;
+    } else if (width > 400) {
       return 1.1; // For larger phones
     } else {
       return 0.9; // For smaller phones
     }
   }
 
+  // Calculate cross axis count based on screen size
+  int _calculateCrossAxisCount(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final isTablet = size.shortestSide >= 600;
+    final orientation = MediaQuery.of(context).orientation;
+    
+    if (isTablet) {
+      return orientation == Orientation.landscape ? 4 : 3;
+    } else {
+      return width > 600 ? 3 : 2;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final menuItems = _getMenuItems(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Sports Academy',
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
+            fontSize: isTablet ? 24 : 20,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56, // Taller app bar for tablets
+        iconTheme: IconThemeData(
+          size: isTablet ? 28 : 24, // Larger icons for tablets
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.black),
+            icon: Icon(
+              Icons.notifications_outlined, 
+              color: Colors.black,
+              size: isTablet ? 28 : 24,
+            ),
             onPressed: () => _showNotifications(context),
+            padding: EdgeInsets.all(isTablet ? 12 : 8),
           ),
           IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
+            icon: Icon(
+              Icons.menu, 
+              color: Colors.black,
+              size: isTablet ? 28 : 24,
+            ),
             onPressed: () => _showFullScreenMenu(context),
+            padding: EdgeInsets.all(isTablet ? 12 : 8),
           ),
         ],
       ),
@@ -414,62 +446,81 @@ List<MenuItem> _getMenuItems(BuildContext context) {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome to',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 24.0 : 16.0,
+              vertical: isTablet ? 16.0 : 8.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome section with responsive text sizes
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: isTablet ? 16.0 : 8.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome to',
+                        style: TextStyle(
+                          fontSize: isTablet ? 20 : 16,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Sports Academy',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                      SizedBox(height: isTablet ? 8 : 4),
+                      Text(
+                        'Sports Academy',
+                        style: TextStyle(
+                          fontSize: isTablet ? 32 : 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: screenWidth > 600 ? 3 : 2,
-                        childAspectRatio: _calculateAspectRatio(screenWidth),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: menuItems.length,
-                      itemBuilder: (context, index) {
-                        final item = menuItems[index];
-                        return _buildMenuCard(
-                          title: item.title,
-                          icon: item.icon,
-                          color: item.color,
-                          subtitle: item.subtitle,
-                          onTap: item.onTap,
+                
+                SizedBox(height: isTablet ? 24 : 16),
+                
+                // Center grid on tablets for better aesthetics
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isTablet ? 1200 : double.infinity,
+                    ),
+                    child: OrientationBuilder(
+                      builder: (context, orientation) {
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: _calculateCrossAxisCount(context),
+                            childAspectRatio: _calculateAspectRatio(context),
+                            crossAxisSpacing: isTablet ? 16 : 12,
+                            mainAxisSpacing: isTablet ? 16 : 12,
+                          ),
+                          itemCount: menuItems.length,
+                          itemBuilder: (context, index) {
+                            final item = menuItems[index];
+                            return _buildMenuCard(
+                              context: context,
+                              title: item.title,
+                              icon: item.icon,
+                              color: item.color,
+                              subtitle: item.subtitle,
+                              onTap: item.onTap,
+                            );
+                          },
                         );
                       },
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+                
+                SizedBox(height: isTablet ? 32 : 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -477,75 +528,77 @@ List<MenuItem> _getMenuItems(BuildContext context) {
   }
 
   Widget _buildMenuCard({
+    required BuildContext context,
     required String title,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
     String? subtitle,
   }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 180;
-        
-        return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+        child: Container(
+          padding: EdgeInsets.all(isTablet ? 20 : 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+            color: Colors.white,
           ),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon container with responsive sizing
+              Container(
+                padding: EdgeInsets.all(isTablet ? 16 : 12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: isTablet ? 36 : 28,
+                  color: color,
+                ),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      icon,
-                      size: isSmallScreen ? 24 : 28,
-                      color: color,
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 8 : 12),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (subtitle != null) ...[
-                    SizedBox(height: isSmallScreen ? 2 : 4),
-                    Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 10 : 12,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: isSmallScreen ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
+              SizedBox(height: isTablet ? 16 : 12),
+              
+              // Title with responsive text size
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
+              
+              // Subtitle with responsive text size
+              if (subtitle != null) ...[
+                SizedBox(height: isTablet ? 8 : 4),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isTablet ? 14 : 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

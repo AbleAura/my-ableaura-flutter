@@ -127,114 +127,169 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get device size and check if it's a tablet
+    final Size deviceSize = MediaQuery.of(context).size;
+    final bool isTablet = deviceSize.shortestSide >= 600;
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(
+            Icons.arrow_back, 
+            color: Colors.black,
+            size: isTablet ? 28 : 24,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'VERIFY DETAILS',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isTablet ? 32 : 16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 600 : double.infinity,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'OTP sent to +91-${widget.phone}',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
-            const Text(
-              'ENTER OTP',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(
-                4,
-                (index) => SizedBox(
-                  width: 60,
-                  child: TextField(
-                    controller: _controllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Color(0xFF303030), width: 2),
-                      ),
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(1),
-                    ],
-                    onChanged: (value) {
-                      if (value.length == 1 && index < 3) {
-                        _focusNodes[index + 1].requestFocus();
-                      }
-                      if (value.length == 1 && index == 3) {
-                        _focusNodes[index].unfocus();
-                        _verifyOTP(); // Auto verify when all digits are entered
-                      }
-                      if (value.isEmpty && index > 0) {
-                        _focusNodes[index - 1].requestFocus();
-                      }
-                    },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'VERIFY DETAILS',
+                  style: TextStyle(
+                    fontSize: isTablet ? 32 : 24, 
+                    fontWeight: FontWeight.bold
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: _resendTimer == 0 ? _resendOTP : null,
-              child: Text(
-                _resendTimer > 0
-                    ? "Didn't receive the OTP? Retry in 00:${_resendTimer.toString().padLeft(2, '0')}"
-                    : "Didn't receive the OTP? Tap to resend",
-                style: TextStyle(
-                  color: _resendTimer > 0 ? Colors.grey : const Color(0xFF303030),
+                SizedBox(height: isTablet ? 16 : 8),
+                Text(
+                  'OTP sent to +91-${widget.phone}',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: isTablet ? 18 : 14,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _verifyOTP,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF303030),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                SizedBox(height: isTablet ? 60 : 40),
+                Text(
+                  'ENTER OTP',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isTablet ? 18 : 14,
+                  ),
                 ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 2,
+                SizedBox(height: isTablet ? 24 : 16),
+                
+                // OTP Input Fields
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    4,
+                    (index) => SizedBox(
+                      width: isTablet ? 100 : 60,
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        style: TextStyle(
+                          fontSize: isTablet ? 36 : 24, 
+                          fontWeight: FontWeight.bold
+                        ),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Colors.grey,
+                              width: isTablet ? 2 : 1,
+                            ),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: const Color(0xFF303030), 
+                              width: isTablet ? 3 : 2
+                            ),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: isTablet ? 16 : 8
+                          ),
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(1),
+                        ],
+                        onChanged: (value) {
+                          if (value.length == 1 && index < 3) {
+                            _focusNodes[index + 1].requestFocus();
+                          }
+                          if (value.length == 1 && index == 3) {
+                            _focusNodes[index].unfocus();
+                            _verifyOTP(); // Auto verify when all digits are entered
+                          }
+                          if (value.isEmpty && index > 0) {
+                            _focusNodes[index - 1].requestFocus();
+                          }
+                        },
                       ),
-                    )
-                  : const Text(
-                      'VERIFY',
-                      style: TextStyle(color: Colors.white),
                     ),
+                  ),
+                ),
+                
+                SizedBox(height: isTablet ? 36 : 24),
+                
+                // Resend OTP Button
+                Center(
+                  child: GestureDetector(
+                    onTap: _resendTimer == 0 ? _resendOTP : null,
+                    child: Text(
+                      _resendTimer > 0
+                          ? "Didn't receive the OTP? Retry in 00:${_resendTimer.toString().padLeft(2, '0')}"
+                          : "Didn't receive the OTP? Tap to resend",
+                      style: TextStyle(
+                        color: _resendTimer > 0 ? Colors.grey : const Color(0xFF303030),
+                        fontSize: isTablet ? 16 : 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: isTablet ? 36 : 24),
+                
+                // Verify Button
+                SizedBox(
+                  height: isTablet ? 60 : 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyOTP,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF303030),
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: isTablet ? 24 : 20,
+                            width: isTablet ? 24 : 20,
+                            child: const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'VERIFY',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isTablet ? 18 : 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

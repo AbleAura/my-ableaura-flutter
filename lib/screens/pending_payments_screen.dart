@@ -86,7 +86,7 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
       final paymentLinkId = uri.pathSegments.last;
       
       await RazorpayService.processPayment(
-          paymentId: payment.id, // Added paymentId
+        paymentId: payment.id, // Added paymentId
         amount: payment.amount,
         paymentLink: paymentLinkId,
       );
@@ -107,14 +107,15 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
     super.dispose();
   }
 
-  Widget _buildPaymentCard(Payment payment) {
+  Widget _buildPaymentCard(Payment payment, bool isTablet) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isTablet ? 20 : 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
+      elevation: isTablet ? 2 : 1,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -128,13 +129,13 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
                       'Amount',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 14,
+                        fontSize: isTablet ? 16 : 14,
                       ),
                     ),
                     Text(
                       '₹${payment.amount}',
-                      style: const TextStyle(
-                        fontSize: 24,
+                      style: TextStyle(
+                        fontSize: isTablet ? 30 : 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -147,13 +148,13 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
                       'Due Month',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 14,
+                        fontSize: isTablet ? 16 : 14,
                       ),
                     ),
                     Text(
                       payment.monthName,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: isTablet ? 20 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -162,31 +163,36 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
               ],
             ),
             if (payment.paymentStatus.toLowerCase() != 'paid') ...[
-              const SizedBox(height: 16),
+              SizedBox(height: isTablet ? 24 : 16),
               SizedBox(
                 width: double.infinity,
+                height: isTablet ? 56 : 48,
                 child: ElevatedButton(
                   onPressed: _isProcessingPayment
                       ? null
                       : () => _processPayment(payment),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF303030),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(vertical: isTablet ? 16 : 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
                     ),
                   ),
                   child: _isProcessingPayment
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
+                      ? SizedBox(
+                          height: isTablet ? 24 : 20,
+                          width: isTablet ? 24 : 20,
+                          child: const CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Pay Now',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isTablet ? 18 : 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
@@ -199,34 +205,43 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pending Payments'),
+        title: Text(
+          'Pending Payments',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.studentName,
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: TextStyle(
+                    fontSize: isTablet ? 26 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isTablet ? 12 : 8),
                 Text(
                   'Your pending payments',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 14,
+                    fontSize: isTablet ? 18 : 14,
                   ),
                 ),
               ],
@@ -245,18 +260,38 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Error: ${snapshot.error}',
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _refreshPayments,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF303030),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isTablet ? 48 : 24,
                           ),
-                          child: const Text('Retry'),
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: isTablet ? 18 : 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        SizedBox(height: isTablet ? 24 : 16),
+                        SizedBox(
+                          height: isTablet ? 56 : 48,
+                          child: ElevatedButton(
+                            onPressed: _refreshPayments,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF303030),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isTablet ? 32 : 24,
+                                vertical: isTablet ? 12 : 8,
+                              ),
+                            ),
+                            child: Text(
+                              'Retry',
+                              style: TextStyle(
+                                fontSize: isTablet ? 18 : 16,
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -265,15 +300,28 @@ class _PendingPaymentsScreenState extends State<PendingPaymentsScreen> {
 
                 final payments = snapshot.data ?? [];
                 if (payments.isEmpty) {
-                  return const Center(
-                    child: Text('No pending payments'),
+                  return Center(
+                    child: Text(
+                      'No pending payments',
+                      style: TextStyle(
+                        fontSize: isTablet ? 18 : 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   );
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: payments.length,
-                  itemBuilder: (context, index) => _buildPaymentCard(payments[index]),
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isTablet ? 700 : screenWidth,
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.all(isTablet ? 24 : 16),
+                      itemCount: payments.length,
+                      itemBuilder: (context, index) => _buildPaymentCard(payments[index], isTablet),
+                    ),
+                  ),
                 );
               },
             ),

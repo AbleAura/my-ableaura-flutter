@@ -164,130 +164,211 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get device size
+    final Size deviceSize = MediaQuery.of(context).size;
+    final bool isTablet = deviceSize.shortestSide >= 600;
+    
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.asset(
-              'assets/login_top.jpeg',
-              width: double.infinity,
+      body: Column(
+        children: [
+          // Header Image that fills the top part of the screen
+          Container(
+            width: deviceSize.width,
+            height: isTablet ? deviceSize.height * 0.4 : 200,
+            child: Image.asset(
+              'assets/whatsapp-share-img.jpg',
               fit: BoxFit.cover,
-              height: 200,
+              width: deviceSize.width,
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'LOGIN',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Enter your phone number to proceed',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 40),
-                  Row(
-                    children: [
-                      Container(
-                        height: 56,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('🇮🇳 +91'),
-                            const SizedBox(width: 4),
-                            Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _phoneController,
-                          decoration: InputDecoration(
-                            hintText: 'Mobile number',
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade400),
-                            ),
-                            counterText: '',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(10),
-                          ],
-                          maxLength: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF303030),
-                      minimumSize: const Size(double.infinity, 50),
+          ),
+          
+          // Content Area
+          Expanded(
+            child: SafeArea(
+              top: false, // No need for top safe area since image handles that
+              child: Center(
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: isTablet ? 600 : deviceSize.width,
                     ),
-                    onPressed: _isLoading ? null : _sendOTP,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text('CONTINUE', style: TextStyle(color: Colors.white)),
-                  ),
-                  const SizedBox(height: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                  
+                  // Main Content with responsive padding
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        children: [
-                          const TextSpan(text: 'By clicking, I accept the '),
-                          TextSpan(
-                            text: 'Terms & Conditions',
-                            style: const TextStyle(
-                              color: Color(0xFF303030),
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => _showPolicyDialog(context, 'terms'),
+                    padding: EdgeInsets.all(isTablet ? 32 : 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontSize: isTablet ? 32 : 24, 
+                            fontWeight: FontWeight.bold
                           ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(
-                              color: Color(0xFF303030),
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => _showPolicyDialog(context, 'privacy'),
+                        ),
+                        SizedBox(height: isTablet ? 16 : 8),
+                        Text(
+                          'Enter your phone number to proceed',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: isTablet ? 18 : 14,
                           ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(height: isTablet ? 60 : 40),
+                        
+                        // Phone input with responsive sizing
+                        Row(
+                          children: [
+                            // Country code selector
+                            Container(
+                              height: isTablet ? 64 : 56,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isTablet ? 16 : 12
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '🇮🇳 +91',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 18 : 14,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.arrow_drop_down, 
+                                    color: Colors.grey.shade600,
+                                    size: isTablet ? 28 : 24,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: isTablet ? 16 : 8),
+                            
+                            // Phone number field
+                            Expanded(
+                              child: TextField(
+                                controller: _phoneController,
+                                decoration: InputDecoration(
+                                  hintText: 'Mobile number',
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey.shade400),
+                                  ),
+                                  counterText: '',
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: isTablet ? 16 : 12, 
+                                    vertical: isTablet ? 20 : 16
+                                  ),
+                                  hintStyle: TextStyle(
+                                    fontSize: isTablet ? 18 : 14,
+                                  ),
+                                ),
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
+                                maxLength: 10,
+                                style: TextStyle(
+                                  fontSize: isTablet ? 18 : 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: isTablet ? 40 : 24),
+                        
+                        // Continue button with responsive sizing
+                        SizedBox(
+                          height: isTablet ? 60 : 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF303030),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(isTablet ? 8 : 4),
+                              ),
+                            ),
+                            onPressed: _isLoading ? null : _sendOTP,
+                            child: _isLoading
+                                ? SizedBox(
+                                    height: isTablet ? 24 : 20,
+                                    width: isTablet ? 24 : 20,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'CONTINUE',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isTablet ? 18 : 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        
+                        SizedBox(height: isTablet ? 24 : 16),
+                        
+                        // Terms and conditions text
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
+                          child: RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                              style: TextStyle(
+                                color: Colors.grey[600], 
+                                fontSize: isTablet ? 14 : 12
+                              ),
+                              children: [
+                                const TextSpan(text: 'By clicking, I accept the '),
+                                TextSpan(
+                                  text: 'Terms & Conditions',
+                                  style: TextStyle(
+                                    color: Color(0xFF303030),
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    fontSize: isTablet ? 14 : 12,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () => _showPolicyDialog(context, 'terms'),
+                                ),
+                                const TextSpan(text: ' and '),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: TextStyle(
+                                    color: Color(0xFF303030),
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    fontSize: isTablet ? 14 : 12,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () => _showPolicyDialog(context, 'privacy'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

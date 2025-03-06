@@ -60,16 +60,17 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
     }
   }
 
-  Widget _buildSessionCard(HomeSession session) {
+  Widget _buildSessionCard(HomeSession session, bool isTablet) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: isTablet ? 24 : 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
+      elevation: isTablet ? 2 : 1,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isTablet ? 24 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -78,48 +79,48 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
                     Expanded(
                       child: Text(
                         session.listing,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: isTablet ? 22 : 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 16 : 12,
+                        vertical: isTablet ? 8 : 6,
                       ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(session.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
                       ),
                       child: Text(
                         session.status,
                         style: TextStyle(
                           color: _getStatusColor(session.status),
-                          fontSize: 12,
+                          fontSize: isTablet ? 14 : 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: isTablet ? 16 : 12),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_today,
-                      size: 20,
+                      size: isTablet ? 24 : 20,
                       color: Colors.grey,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Date: ${DateFormat('MMM d, yyyy').format(session.date)}',
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: isTablet ? 18 : 16),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: isTablet ? 16 : 12),
                 // Coach Status
                 Row(
                   children: [
@@ -127,52 +128,52 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
                       session.coach != null 
                           ? Icons.verified_user_outlined 
                           : Icons.pending_outlined,
-                      size: 20,
+                      size: isTablet ? 24 : 20,
                       color: session.coach != null ? Colors.green : Colors.orange,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       'Coach Status: ${session.coach != null ? "Assigned" : "Not Assigned"}',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: isTablet ? 18 : 16,
                         color: session.coach != null ? Colors.green : Colors.orange,
                       ),
                     ),
                   ],
                 ),
                 if (session.coach != null) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: isTablet ? 12 : 8),
                   // Coach Name
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.sports,
-                        size: 20,
+                        size: isTablet ? 24 : 20,
                         color: Colors.blue,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: isTablet ? 12 : 8),
                       Text(
                         'Coach Name: ${session.coach}',
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: TextStyle(
+                          fontSize: isTablet ? 18 : 16,
                           color: Colors.blue,
                         ),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 12),
+                SizedBox(height: isTablet ? 16 : 12),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.access_time,
-                      size: 20,
+                      size: isTablet ? 24 : 20,
                       color: Colors.grey,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: isTablet ? 12 : 8),
                     Text(
                       '${session.fromTime} - ${session.toTime}',
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: isTablet ? 18 : 16),
                     ),
                   ],
                 ),
@@ -182,38 +183,44 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
           if (session.status.toLowerCase() == 'completed' && !session.hasFeedback)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey[200]!),
+                  top: BorderSide(color: Colors.grey[200]!, width: isTablet ? 2 : 1),
                 ),
               ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF303030),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: isTablet ? 56 : 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF303030),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 12 : 8,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SessionFeedbackScreen(
+                          sessionId: session.id,
+                          coachName: session.coach ?? 'Unknown Coach',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Share Feedback',
+                    style: TextStyle(
+                      fontSize: isTablet ? 18 : 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SessionFeedbackScreen(
-                        sessionId: session.id,
-                        coachName: session.coach ?? 'Unknown Coach',
-                      ),
-                    ),
-                  );
-                },
-                child: const Text(
-    'Share Feedback',
-    style: TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w500,
-      color: Colors.white,
-    ),
-  ),
               ),
             ),
         ],
@@ -223,12 +230,20 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.studentName}\'s Home Sessions'),
+        title: Text(
+          '${widget.studentName}\'s Home Sessions',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -237,18 +252,36 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Error: $_error',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF303030),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isTablet ? 40 : 20),
+                        child: Text(
+                          'Error: $_error',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: isTablet ? 18 : 16,
+                          ),
                         ),
-                        onPressed: _loadSessions,
-                        child: const Text('Retry'),
+                      ),
+                      SizedBox(height: isTablet ? 24 : 16),
+                      SizedBox(
+                        height: isTablet ? 56 : 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF303030),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 32 : 24,
+                              vertical: isTablet ? 12 : 8,
+                            ),
+                          ),
+                          onPressed: _loadSessions,
+                          child: Text(
+                            'Retry',
+                            style: TextStyle(
+                              fontSize: isTablet ? 18 : 16,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -260,15 +293,15 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
                         children: [
                           Icon(
                             Icons.sports,
-                            size: 64,
+                            size: isTablet ? 80 : 64,
                             color: Colors.grey[400],
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: isTablet ? 24 : 16),
                           Text(
                             'No home sessions scheduled for today',
                             style: TextStyle(
                               color: Colors.grey[600],
-                              fontSize: 16,
+                              fontSize: isTablet ? 20 : 16,
                             ),
                           ),
                         ],
@@ -276,10 +309,17 @@ class _HomeSessionsScreenState extends State<HomeSessionsScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _loadSessions,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _sessions.length,
-                        itemBuilder: (context, index) => _buildSessionCard(_sessions[index]),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet ? 800 : double.infinity,
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.all(isTablet ? 24 : 16),
+                            itemCount: _sessions.length,
+                            itemBuilder: (context, index) => _buildSessionCard(_sessions[index], isTablet),
+                          ),
+                        ),
                       ),
                     ),
     );

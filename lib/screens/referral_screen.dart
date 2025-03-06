@@ -24,7 +24,7 @@ class _ReferralScreenState extends State<ReferralScreen>
   late TabController _tabController;
   bool _isLoading = false;
   String? _referralCode;
-  String? _shortUrl; // Add this
+  String? _shortUrl;
   Map<String, dynamic>? _stats;
 
   @override
@@ -102,74 +102,102 @@ Join the Ableaura family today and give your child the advantage they deserve!
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Refer & Earn'),
+        title: Text(
+          'Refer & Earn',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF303030),
-          tabs: const [
-            Tab(text: 'Share & Earn'),
-            Tab(text: 'My Referrals'),
+          indicatorWeight: isTablet ? 3 : 2,
+          labelStyle: TextStyle(
+            fontSize: isTablet ? 16 : 14,
+            fontWeight: FontWeight.w500,
+          ),
+          tabs: [
+            Tab(
+              text: 'Share & Earn',
+              height: isTablet ? 56 : 46,
+            ),
+            Tab(
+              text: 'My Referrals',
+              height: isTablet ? 56 : 46,
+            ),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildShareTab(),
-          _buildMyReferralsTab(),
+          _buildShareTab(isTablet),
+          _buildMyReferralsTab(isTablet),
         ],
       ),
     );
   }
 
-  Widget _buildShareTab() {
+  Widget _buildShareTab(bool isTablet) {
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildRewardsCard(),
-              const SizedBox(height: 24),
-              _buildReferralCodeCard(),
-              const SizedBox(height: 24),
-              _buildShareButton(),
-              if (_stats != null) ...[
-                const SizedBox(height: 24),
-                _buildStatsGrid(),
-              ],
-            ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 700 : double.infinity,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildRewardsCard(isTablet),
+                  SizedBox(height: isTablet ? 32 : 24),
+                  _buildReferralCodeCard(isTablet),
+                  SizedBox(height: isTablet ? 32 : 24),
+                  _buildShareButton(isTablet),
+                  if (_stats != null) ...[
+                    SizedBox(height: isTablet ? 32 : 24),
+                    _buildStatsGrid(isTablet),
+                  ],
+                  // Add extra space at bottom to prevent overflow
+                  SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildRewardsCard() {
+  Widget _buildRewardsCard(bool isTablet) {
     return Card(
-      elevation: 4,
+      elevation: isTablet ? 4 : 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isTablet ? 24 : 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.black, Color(0xFF303030)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,55 +205,56 @@ Join the Ableaura family today and give your child the advantage they deserve!
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isTablet ? 12 : 8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.card_giftcard,
                     color: Colors.white,
+                    size: isTablet ? 28 : 24,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
+                SizedBox(width: isTablet ? 16 : 12),
+                Text(
                   'Refer & Get Free Sessions',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: isTablet ? 24 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _buildRewardPoint('Get 1 free session for each referral'),
-            _buildRewardPoint('No limit on referrals'),
+            SizedBox(height: isTablet ? 24 : 16),
+            _buildRewardPoint('Get 1 free session for each referral', isTablet),
+            _buildRewardPoint('No limit on referrals', isTablet),
             _buildRewardPoint(
-                'Free session after your referral completes 1 month'),
+                'Free session after your referral completes 1 month', isTablet),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRewardPoint(String text) {
+  Widget _buildRewardPoint(String text, bool isTablet) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: isTablet ? 12 : 8),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.check_circle_outline,
             color: Colors.white70,
-            size: 20,
+            size: isTablet ? 24 : 20,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isTablet ? 12 : 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+                fontSize: isTablet ? 16 : 14,
               ),
             ),
           ),
@@ -234,25 +263,25 @@ Join the Ableaura family today and give your child the advantage they deserve!
     );
   }
 
-  Widget _buildReferralCodeCard() {
+  Widget _buildReferralCodeCard(bool isTablet) {
     return Card(
-      elevation: 2,
+      elevation: isTablet ? 2 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isTablet ? 24 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Your Referral Code',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isTablet ? 20 : 16,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isTablet ? 16 : 12),
             InkWell(
               onTap: () {
                 if (_referralCode != null) {
@@ -263,24 +292,28 @@ Join the Ableaura family today and give your child the advantage they deserve!
                 }
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isTablet ? 16 : 12),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: Row(
                   children: [
                     Text(
                       _isLoading ? 'Loading...' : (_referralCode ?? 'Error'),
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: TextStyle(
+                        fontSize: isTablet ? 24 : 20,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1,
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.copy, color: Colors.grey[600]),
+                    Icon(
+                      Icons.copy, 
+                      color: Colors.grey[600],
+                      size: isTablet ? 28 : 24,
+                    ),
                   ],
                 ),
               ),
@@ -291,92 +324,128 @@ Join the Ableaura family today and give your child the advantage they deserve!
     );
   }
 
-  Widget _buildShareButton() {
-    return ElevatedButton.icon(
-      onPressed: _shareReferralCode,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF303030),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+  Widget _buildShareButton(bool isTablet) {
+    return SizedBox(
+      height: isTablet ? 60 : 48,
+      child: ElevatedButton.icon(
+        onPressed: _shareReferralCode,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF303030),
+          padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+          ),
         ),
-      ),
-      icon: const Icon(Icons.share, color: Colors.white), // Added color here
-      label: const Text(
-        'Share with Friends',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white, // Added this line
+        icon: Icon(
+          Icons.share, 
+          color: Colors.white,
+          size: isTablet ? 24 : 20,
+        ),
+        label: Text(
+          'Share with Friends',
+          style: TextStyle(
+            fontSize: isTablet ? 18 : 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(bool isTablet) {
+    // For tablets in landscape, keep 4 columns, otherwise use 2 columns
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+    final crossAxisCount = isTablet && isLandscape ? 4 : 2;
+    
+    // Adjust aspect ratio based on device and orientation - increase height for phone
+    final childAspectRatio = isTablet 
+        ? (isLandscape ? 2.0 : 1.8)  // Higher aspect ratio for tablets
+        : 1.4;                       // Better aspect ratio for phones - lower than before
+    
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: isTablet ? 20 : 16,
+      crossAxisSpacing: isTablet ? 20 : 16,
+      childAspectRatio: childAspectRatio,
       children: [
         _buildStatCard(
           'Total Referrals',
           _stats!['total_referrals'].toString(),
           Icons.people_outline,
           Colors.blue,
+          isTablet,
         ),
         _buildStatCard(
           'Completed',
           _stats!['completed_referrals'].toString(),
           Icons.check_circle_outline,
           Colors.green,
+          isTablet,
         ),
         _buildStatCard(
           'Pending',
           _stats!['pending_referrals'].toString(),
           Icons.pending_outlined,
           Colors.orange,
+          isTablet,
         ),
         _buildStatCard(
           'Sessions Earned',
           _stats!['sessions_earned'].toString(),
           Icons.star_outline,
           Colors.purple,
+          isTablet,
         ),
       ],
     );
   }
 
   Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
+      String title, String value, IconData icon, Color color, bool isTablet) {
     return Card(
+      elevation: isTablet ? 2 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isTablet ? 16 : 12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min, // Use minimum space needed
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            Icon(
+              icon, 
+              color: color, 
+              size: isTablet ? 28 : 24,
+            ),
+            SizedBox(height: isTablet ? 8 : 6),
+            // Wrap value in FittedBox to prevent overflow
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: isTablet ? 26 : 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
+            SizedBox(height: isTablet ? 4 : 2),
+            // Wrap title in FittedBox to prevent overflow
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: isTablet ? 14 : 11, // Smaller font on phones
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -384,7 +453,7 @@ Join the Ableaura family today and give your child the advantage they deserve!
     );
   }
 
-  Widget _buildMyReferralsTab() {
+  Widget _buildMyReferralsTab(bool isTablet) {
     return FutureBuilder<List<ReferralDetail>>(
       future: ReferralService.getReferrals(),
       builder: (context, snapshot) {
@@ -397,19 +466,38 @@ Join the Ableaura family today and give your child the advantage they deserve!
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {});
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF303030),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isTablet ? 48 : 24),
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: isTablet ? 18 : 16,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  child: const Text('Retry'),
+                ),
+                SizedBox(height: isTablet ? 24 : 16),
+                SizedBox(
+                  height: isTablet ? 56 : 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF303030),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 32 : 24,
+                        vertical: isTablet ? 12 : 8,
+                      ),
+                    ),
+                    child: Text(
+                      'Retry',
+                      style: TextStyle(
+                        fontSize: isTablet ? 18 : 16,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -425,23 +513,23 @@ Join the Ableaura family today and give your child the advantage they deserve!
               children: [
                 Icon(
                   Icons.people_outline,
-                  size: 64,
+                  size: isTablet ? 80 : 64,
                   color: Colors.grey[400],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isTablet ? 24 : 16),
                 Text(
                   'No referrals yet',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 16,
+                    fontSize: isTablet ? 20 : 16,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isTablet ? 12 : 8),
                 Text(
                   'Share your referral code to get started',
                   style: TextStyle(
                     color: Colors.grey[500],
-                    fontSize: 14,
+                    fontSize: isTablet ? 16 : 14,
                   ),
                 ),
               ],
@@ -453,97 +541,151 @@ Join the Ableaura family today and give your child the advantage they deserve!
           onRefresh: () async {
             setState(() {});
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: referrals.length,
-            itemBuilder: (context, index) =>
-                _buildReferralCard(referrals[index]),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isTablet ? 800 : double.infinity,
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.all(isTablet ? 24 : 16),
+                itemCount: referrals.length,
+                itemBuilder: (context, index) =>
+                    _buildReferralCard(referrals[index], isTablet),
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildReferralCard(ReferralDetail referral) {
+  Widget _buildReferralCard(ReferralDetail referral, bool isTablet) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isTablet ? 16 : 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          referral.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
+      elevation: isTablet ? 2 : 1,
+      child: Padding(
+        padding: EdgeInsets.all(isTablet ? 20 : 16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Text(referral.phone),
-            Text(
-              'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-            if (referral.meetingScheduledAt != null) // Added
-              Text(
-                'Meeting Scheduled: ${DateFormat('MMM d, yyyy').format(referral.meetingScheduledAt!)}',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-            if (referral.registrationDate != null)
-              Text(
-                'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-            if (referral.paymentCompletionDate != null)
-              Text(
-                'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-          ],
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildStatusChip(referral.displayStatus, referral.statusColor),
-            if (referral.rewardStatus == 'credited')
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Session Credited',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        referral.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: isTablet ? 18 : 16,
+                        ),
+                      ),
+                      SizedBox(height: isTablet ? 6 : 4),
+                      Text(
+                        referral.phone,
+                        style: TextStyle(
+                          fontSize: isTablet ? 16 : 14,
+                        ),
+                      ),
+                      SizedBox(height: isTablet ? 4 : 2),
+                      Text(
+                        'Referred on: ${DateFormat('MMM d, yyyy').format(referral.createdAt)}',
+                        style: TextStyle(
+                          color: Colors.grey[600], 
+                          fontSize: isTablet ? 14 : 12,
+                        ),
+                      ),
+                      if (referral.meetingScheduledAt != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: isTablet ? 4 : 2),
+                          child: Text(
+                            'Meeting Scheduled: ${DateFormat('MMM d, yyyy').format(referral.meetingScheduledAt!)}',
+                            style: TextStyle(
+                              color: Colors.grey[600], 
+                              fontSize: isTablet ? 14 : 12,
+                            ),
+                          ),
+                        ),
+                      if (referral.registrationDate != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: isTablet ? 4 : 2),
+                          child: Text(
+                            'Registered: ${DateFormat('MMM d, yyyy').format(referral.registrationDate!)}',
+                            style: TextStyle(
+                              color: Colors.grey[600], 
+                              fontSize: isTablet ? 14 : 12,
+                            ),
+                          ),
+                        ),
+                      if (referral.paymentCompletionDate != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: isTablet ? 4 : 2),
+                          child: Text(
+                            'Completed: ${DateFormat('MMM d, yyyy').format(referral.paymentCompletionDate!)}',
+                            style: TextStyle(
+                              color: Colors.grey[600], 
+                              fontSize: isTablet ? 14 : 12,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildStatusChip(referral.displayStatus, referral.statusColor, isTablet),
+                    if (referral.rewardStatus == 'credited')
+                      Container(
+                        margin: EdgeInsets.only(top: isTablet ? 6 : 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 10 : 8,
+                          vertical: isTablet ? 6 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+                        ),
+                        child: Text(
+                          'Session Credited',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: isTablet ? 14 : 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status, Color color) {
+  Widget _buildStatusChip(String status, Color color, bool isTablet) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 16 : 12, 
+        vertical: isTablet ? 8 : 6,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: Text(
         status,
         style: TextStyle(
           color: color,
-          fontSize: 12,
+          fontSize: isTablet ? 14 : 12,
           fontWeight: FontWeight.bold,
         ),
       ),

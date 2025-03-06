@@ -3,6 +3,8 @@
 <plist version="1.0">
 <dict>
     <!-- Privacy Settings -->
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>We need your location to mark attendance accurately at Sports Academy centers.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>This app needs access to location when marking attendance.</string>
     <key>NSLocationAlwaysUsageDescription</key>
@@ -11,6 +13,8 @@
     <string>We need access to your microphone to record voice notes for feedback.</string>
     <key>NSContactsUsageDescription</key>
     <string>This app requires contacts access to invite friends.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo library to save gallery images to your device.</string>
     
     <!-- Basic Configuration -->
     <key>CFBundleDevelopmentRegion</key>

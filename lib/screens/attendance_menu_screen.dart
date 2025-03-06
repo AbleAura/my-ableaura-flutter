@@ -64,36 +64,59 @@ class _AttendanceMenuScreenState extends State<AttendanceMenuScreen> {
       if (!mounted) return;
       
       if (qrCode != null) {
+        final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+        
         showDialog(
           context: context,
           builder: (context) => Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isTablet ? 20 : 12),
+            ),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 60 : 40,
+              vertical: isTablet ? 80 : 24,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(isTablet ? 32.0 : 16.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     childName,
-                    style: const TextStyle(
-                      fontSize: 20,
+                    style: TextStyle(
+                      fontSize: isTablet ? 28 : 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Image.network(qrCode),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF303030),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  SizedBox(height: isTablet ? 24 : 16),
+                  Image.network(
+                    qrCode,
+                    width: isTablet ? 300 : 200,
+                    height: isTablet ? 300 : 200,
+                    fit: BoxFit.contain,
+                  ),
+                  SizedBox(height: isTablet ? 32 : 16),
+                  SizedBox(
+                    height: isTablet ? 60 : 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF303030),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 40 : 24,
+                          vertical: isTablet ? 12 : 8,
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Close',
+                        style: TextStyle(
+                          fontSize: isTablet ? 18 : 16,
+                        ),
                       ),
                     ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
                   ),
                 ],
               ),
@@ -123,12 +146,21 @@ class _AttendanceMenuScreenState extends State<AttendanceMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Attendance'),
+        title: Text(
+          'Attendance',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -137,96 +169,134 @@ class _AttendanceMenuScreenState extends State<AttendanceMenuScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Error: $_error',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF303030),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 40 : 20,
                         ),
-                        onPressed: _loadData,
-                        child: const Text('Retry'),
+                        child: Text(
+                          'Error: $_error',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: isTablet ? 18 : 16,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: isTablet ? 24 : 16),
+                      SizedBox(
+                        height: isTablet ? 56 : 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF303030),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 40 : 24,
+                              vertical: isTablet ? 12 : 8,
+                            ),
+                          ),
+                          onPressed: _loadData,
+                          child: Text(
+                            'Retry',
+                            style: TextStyle(
+                              fontSize: isTablet ? 18 : 16,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      if (_childResponse.data.childCount > 1)
-                        _buildMenuOption(
-                          context: context,
-                          title: 'Show QR Code',
-                          subtitle: 'Display QR code for attendance',
-                          icon: Icons.qr_code,
-                          color: Colors.blue,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChildrenListScreen(
-                                  navigatorKey: widget.navigatorKey,
-                                  onChildSelected: _handleQRCode,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      if (_childResponse.data.childCount > 1)
-                        const SizedBox(height: 16),
-                      _buildMenuOption(
-                        context: context,
-                        title: 'View Attendance',
-                        subtitle: 'Check attendance history',
-                        icon: Icons.calendar_month,
-                        color: Colors.green,
-                        onTap: () {
-                          if (_childResponse.data.childCount == 1) {
-                            final child = _childResponse.data.childDetails.first;
-                            _handleViewAttendance(child.childId, child.name);
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChildrenListScreen(
-                                  navigatorKey: widget.navigatorKey,
-                                  onChildSelected: _handleViewAttendance,
-                                ),
-                              ),
-                            );
-                          }
-                        },
+              : Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isTablet ? 700 : screenWidth,
                       ),
-                      if (_childResponse.data.childCount == 1 && _qrCode != null) ...[
-                        const SizedBox(height: 24),
-                        Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  _childResponse.data.childDetails.first.name,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_childResponse.data.childCount > 1)
+                            _buildMenuOption(
+                              context: context,
+                              title: 'Show QR Code',
+                              subtitle: 'Display QR code for attendance',
+                              icon: Icons.qr_code,
+                              color: Colors.blue,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChildrenListScreen(
+                                      navigatorKey: widget.navigatorKey,
+                                      onChildSelected: _handleQRCode,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                Image.network(_qrCode!),
-                              ],
+                                );
+                              },
                             ),
+                          if (_childResponse.data.childCount > 1)
+                            SizedBox(height: isTablet ? 24 : 16),
+                          _buildMenuOption(
+                            context: context,
+                            title: 'View Attendance',
+                            subtitle: 'Check attendance history',
+                            icon: Icons.calendar_month,
+                            color: Colors.green,
+                            onTap: () {
+                              if (_childResponse.data.childCount == 1) {
+                                final child = _childResponse.data.childDetails.first;
+                                _handleViewAttendance(child.childId, child.name);
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChildrenListScreen(
+                                      navigatorKey: widget.navigatorKey,
+                                      onChildSelected: _handleViewAttendance,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                           ),
-                        ),
-                      ],
-                    ],
+                          if (_childResponse.data.childCount == 1 && _qrCode != null) ...[
+                            SizedBox(height: isTablet ? 32 : 24),
+                            Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(isTablet ? 20 : 12),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      _childResponse.data.childDetails.first.name,
+                                      style: TextStyle(
+                                        fontSize: isTablet ? 24 : 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: isTablet ? 24 : 16),
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: isTablet ? 350 : 280,
+                                        maxHeight: isTablet ? 350 : 280,
+                                      ),
+                                      child: Image.network(
+                                        _qrCode!,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    SizedBox(height: isTablet ? 16 : 8),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
     );
@@ -240,50 +310,60 @@ class _AttendanceMenuScreenState extends State<AttendanceMenuScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(isTablet ? 24.0 : 16.0),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isTablet ? 16 : 12),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: color, size: 32),
+                child: Icon(
+                  icon, 
+                  color: color, 
+                  size: isTablet ? 40 : 32
+                ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: isTablet ? 24 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: isTablet ? 22 : 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: isTablet ? 6 : 4),
                     Text(
                       subtitle,
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 14,
+                        fontSize: isTablet ? 16 : 14,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              Icon(
+                Icons.arrow_forward_ios, 
+                size: isTablet ? 20 : 16, 
+                color: Colors.grey
+              ),
             ],
           ),
         ),

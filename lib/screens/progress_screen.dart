@@ -86,361 +86,329 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       backgroundColor: Color(0xFFF8F7FC), // Light purple background
       appBar: AppBar(
-        leading: BackButton(color: Colors.black),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: Colors.black,
+            size: isTablet ? 28 : 24,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           '${widget.studentName}\'s Progress',
-          style: TextStyle(color: Colors.black),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: isTablet ? 24 : 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
         bottom: TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: 'Monthly View'),
-            Tab(text: 'Overall Progress'),
+            Tab(
+              text: 'Monthly View',
+              height: isTablet ? 56 : 46,
+              child: Text(
+                'Monthly View', 
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                ),
+              ),
+            ),
+            Tab(
+              text: 'Overall Progress',
+              height: isTablet ? 56 : 46,
+              child: Text(
+                'Overall Progress', 
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
+                ),
+              ),
+            ),
           ],
           labelColor: Colors.black,
           unselectedLabelColor: Colors.grey,
           indicatorColor: Colors.deepPurple,
+          indicatorWeight: isTablet ? 3 : 2,
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildMonthlyView(),
-          Center(child: Text('Overall Progress Coming Soon')),
+          _buildMonthlyView(isTablet),
+          Center(
+            child: Text(
+              'Overall Progress Coming Soon',
+              style: TextStyle(
+                fontSize: isTablet ? 18 : 16,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-Widget _buildMonthlyView() {
+  Widget _buildMonthlyView(bool isTablet) {
     return ListView(
       children: [
         // Calendar Card
-        Card(
-          margin: EdgeInsets.all(8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TableCalendar<DailyProgress>(
-            firstDay: DateTime.utc(2023, 1, 1),
-            lastDay: DateTime.utc(2024, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            eventLoader: (day) {
-              return _events[DateTime(day.year, day.month, day.day)] ?? [];
-            },
-            calendarStyle: CalendarStyle(
-              markerDecoration: BoxDecoration(
-                color: Colors.deepPurple,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Colors.deepPurple,
-                shape: BoxShape.circle,
-              ),
-              todayDecoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
+        Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isTablet ? 800 : double.infinity,
             ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-            ),
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-              final events = _getEventsForDay(selectedDay);
-              if (events.isNotEmpty) {
-                _showDayProgress(selectedDay, events);
-              }
-            },
-            onPageChanged: (focusedDay) {
-              _focusedDay = focusedDay;
-              _loadMonthEvents(focusedDay);
-            },
-          ),
-        ),
-
-        // AI Insights Card
-        if (!_isLoading) ...[
-          Padding(
-            padding: const EdgeInsets.all(8.0),
             child: Card(
+              margin: EdgeInsets.all(isTablet ? 16 : 8),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
               ),
+              elevation: isTablet ? 2 : 1,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Builder(
-                  builder: (context) {
-                    final monthEvents = _events.values.expand((e) => e).toList();
-                    print('Building insights for ${monthEvents.length} events'); // Debug print
-
-                    if (monthEvents.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No evaluations recorded this month',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      );
+                padding: EdgeInsets.all(isTablet ? 16 : 8),
+                child: TableCalendar<DailyProgress>(
+                  firstDay: DateTime.utc(2023, 1, 1),
+                  lastDay: DateTime.utc(2024, 12, 31),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  eventLoader: (day) {
+                    return _events[DateTime(day.year, day.month, day.day)] ?? [];
+                  },
+                  calendarStyle: CalendarStyle(
+                    markerDecoration: BoxDecoration(
+                      color: Colors.deepPurple,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.deepPurple,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.deepPurple.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    // Adjust day sizes for tablet
+                    cellMargin: EdgeInsets.all(isTablet ? 4 : 2),
+                    cellPadding: EdgeInsets.all(isTablet ? 6 : 4),
+                    defaultTextStyle: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                    ),
+                    selectedTextStyle: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    todayTextStyle: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    outsideTextStyle: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                      color: Colors.grey,
+                    ),
+                    weekendTextStyle: TextStyle(
+                      fontSize: isTablet ? 16 : 14,
+                      color: Colors.red[300],
+                    ),
+                  ),
+                  headerStyle: HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      fontSize: isTablet ? 20 : 16, 
+                      fontWeight: FontWeight.bold,
+                    ),
+                    leftChevronIcon: Icon(
+                      Icons.chevron_left, 
+                      size: isTablet ? 28 : 24,
+                    ),
+                    rightChevronIcon: Icon(
+                      Icons.chevron_right, 
+                      size: isTablet ? 28 : 24,
+                    ),
+                    headerPadding: EdgeInsets.symmetric(
+                      vertical: isTablet ? 16 : 8,
+                    ),
+                    headerMargin: EdgeInsets.only(
+                      bottom: isTablet ? 16 : 8,
+                    ),
+                  ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(
+                      fontSize: isTablet ? 14 : 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    weekendStyle: TextStyle(
+                      fontSize: isTablet ? 14 : 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[300],
+                    ),
+                  ),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                    final events = _getEventsForDay(selectedDay);
+                    if (events.isNotEmpty) {
+                      _showDayProgress(selectedDay, events, isTablet);
                     }
-
-                    final insights = InsightsGenerator.generateInsights(monthEvents);
-                    print('Generated insights: ${insights.analysis}'); // Debug print
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.auto_awesome, color: Colors.deepPurple),
-                            SizedBox(width: 8),
-                            Text(
-                              'AI Insights',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          insights.analysis,
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
-                        ),
-                        if (insights.recommendations.isNotEmpty) ...[
-                          SizedBox(height: 24),
-                          Text(
-                            'Recommendations',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          ...insights.recommendations.map((rec) => Padding(
-                            padding: EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.arrow_right, color: Colors.deepPurple),
-                                SizedBox(width: 8),
-                                Expanded(child: Text(rec)),
-                              ],
-                            ),
-                          )),
-                        ],
-                      ],
-                    );
+                  },
+                  onPageChanged: (focusedDay) {
+                    _focusedDay = focusedDay;
+                    _loadMonthEvents(focusedDay);
                   },
                 ),
               ),
             ),
           ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildMonthInsights() {
-    final monthEvents = _events.values.expand((e) => e).toList();
-    if (monthEvents.isEmpty) {
-      return Center(
-        child: Text(
-          'No evaluations recorded this month',
-          style: TextStyle(color: Colors.grey[600]),
         ),
-      );
-    }
 
-    // Generate insights using InsightsGenerator
-    final insights = InsightsGenerator.generateInsights(monthEvents);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Colors.deepPurple),
-            SizedBox(width: 8),
-            Text(
-              'AI Insights',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+        // AI Insights Card
+        if (!_isLoading) ...[
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isTablet ? 800 : double.infinity,
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: 16),
-        Text(
-          insights.analysis,
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.5,
-            color: Colors.grey[800],
-          ),
-        ),
-        if (insights.recommendations.isNotEmpty) ...[
-          SizedBox(height: 24),
-          Text(
-            'Recommendations',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 12),
-          ...insights.recommendations.map((recommendation) => Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.arrow_right, 
-                     color: Colors.deepPurple,
-                     size: 24),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    recommendation,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: Colors.grey[800],
+              child: Padding(
+                padding: EdgeInsets.all(isTablet ? 16 : 8),
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+                  ),
+                  elevation: isTablet ? 2 : 1,
+                  child: Padding(
+                    padding: EdgeInsets.all(isTablet ? 24 : 16),
+                    child: Builder(
+                      builder: (context) {
+                        final monthEvents = _events.values.expand((e) => e).toList();
+
+                        if (monthEvents.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: isTablet ? 40 : 24),
+                              child: Text(
+                                'No evaluations recorded this month',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: isTablet ? 18 : 16,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final insights = InsightsGenerator.generateInsights(monthEvents);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome, 
+                                  color: Colors.deepPurple,
+                                  size: isTablet ? 28 : 24,
+                                ),
+                                SizedBox(width: isTablet ? 12 : 8),
+                                Text(
+                                  'AI Insights',
+                                  style: TextStyle(
+                                    fontSize: isTablet ? 24 : 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: isTablet ? 24 : 16),
+                            Text(
+                              insights.analysis,
+                              style: TextStyle(
+                                fontSize: isTablet ? 18 : 16,
+                                height: 1.5,
+                              ),
+                            ),
+                            if (insights.recommendations.isNotEmpty) ...[
+                              SizedBox(height: isTablet ? 32 : 24),
+                              Text(
+                                'Recommendations',
+                                style: TextStyle(
+                                  fontSize: isTablet ? 22 : 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: isTablet ? 16 : 12),
+                              ...insights.recommendations.map((rec) => Padding(
+                                padding: EdgeInsets.only(bottom: isTablet ? 12 : 8),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_right, 
+                                      color: Colors.deepPurple,
+                                      size: isTablet ? 28 : 24,
+                                    ),
+                                    SizedBox(width: isTablet ? 12 : 8),
+                                    Expanded(
+                                      child: Text(
+                                        rec,
+                                        style: TextStyle(
+                                          fontSize: isTablet ? 16 : 14,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                            ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          )).toList(),
+          ),
         ],
       ],
     );
   }
 
-  Widget _buildAssessmentBars() {
-    final monthEvents = _events.values.expand((e) => e).toList();
-    if (monthEvents.isEmpty) return SizedBox.shrink();
-
-    return Column(
-      children: [
-        _buildAssessmentBar('Support'),
-        SizedBox(height: 16),
-        _buildAssessmentBar('Instruction'),
-        SizedBox(height: 16),
-        _buildAssessmentBar('Performance'),
-      ],
-    );
-  }
-
-  Widget _buildAssessmentBar(String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-          ),
-        ),
-        SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: 0.8, // Replace with actual calculation
-          backgroundColor: Colors.grey[200],
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-          minHeight: 4,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAIInsightsSection() {
-    final monthEvents = _events.values.expand((e) => e).toList();
-    if (monthEvents.isEmpty) return SizedBox.shrink();
-
-    // Generate insights using InsightsGenerator
-    final insights = InsightsGenerator.generateInsights(monthEvents);
-
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Colors.deepPurple),
-              SizedBox(width: 8),
-              Text(
-                'AI Insights',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Text(insights.analysis),
-          if (insights.recommendations.isNotEmpty) ...[
-            SizedBox(height: 16),
-            Text(
-              'Recommendations',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            ...insights.recommendations.map((rec) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.arrow_right, color: Colors.deepPurple),
-                  SizedBox(width: 8),
-                  Expanded(child: Text(rec)),
-                ],
-              ),
-            )),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showDayProgress(DateTime selectedDay, List<DailyProgress> events) {
+  void _showDayProgress(DateTime selectedDay, List<DailyProgress> events, bool isTablet) {
+    final bottomSheetHeight = MediaQuery.of(context).size.height * (isTablet ? 0.7 : 0.6);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(isTablet ? 28 : 20),
+        ),
       ),
-      builder: (context) => _buildDailyProgressSheet(selectedDay, events),
+      constraints: BoxConstraints(
+        maxWidth: isTablet ? 800 : double.infinity,
+        maxHeight: bottomSheetHeight,
+      ),
+      builder: (context) => _buildDailyProgressSheet(selectedDay, events, isTablet),
     );
   }
 
-  Widget _buildDailyProgressSheet(DateTime selectedDay, List<DailyProgress> events) {
+  Widget _buildDailyProgressSheet(DateTime selectedDay, List<DailyProgress> events, bool isTablet) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(isTablet ? 24 : 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -450,60 +418,74 @@ Widget _buildMonthlyView() {
               Text(
                 DateFormat('MMMM d, yyyy').format(selectedDay),
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: isTablet ? 24 : 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close),
+                icon: Icon(
+                  Icons.close,
+                  size: isTablet ? 28 : 24,
+                ),
+                padding: EdgeInsets.all(isTablet ? 8 : 4),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
-          Divider(),
-          ...events.map((event) => _buildAssessmentCard(event)).toList(),
-          SizedBox(height: 16),
+          Divider(thickness: isTablet ? 2 : 1),
+          Expanded(
+            child: ListView.builder(
+              itemCount: events.length,
+              itemBuilder: (context, index) {
+                return _buildAssessmentCard(events[index], isTablet);
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAssessmentCard(DailyProgress event) {
+  Widget _buildAssessmentCard(DailyProgress event, bool isTablet) {
     return Card(
-      margin: EdgeInsets.only(top: 16),
+      margin: EdgeInsets.only(top: isTablet ? 24 : 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+      ),
+      elevation: isTablet ? 2 : 1,
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(isTablet ? 24 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Daily Assessment',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: isTablet ? 22 : 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: isTablet ? 12 : 8),
             Text(
               event.skillName,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isTablet ? 18 : 16,
                 color: Colors.grey[600],
               ),
             ),
-            SizedBox(height: 16),
-            _buildLevelBox('Independence', event.supportLevel),
-            SizedBox(height: 8),
-            _buildLevelBox('Instruction', event.instructionLevel),
-            SizedBox(height: 8),
-            _buildLevelBox('Performance', event.performanceLevel),
+            SizedBox(height: isTablet ? 24 : 16),
+            _buildLevelBox('Independence', event.supportLevel, isTablet),
+            SizedBox(height: isTablet ? 12 : 8),
+            _buildLevelBox('Instruction', event.instructionLevel, isTablet),
+            SizedBox(height: isTablet ? 12 : 8),
+            _buildLevelBox('Performance', event.performanceLevel, isTablet),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLevelBox(String label, String level) {
+  Widget _buildLevelBox(String label, String level, bool isTablet) {
     String displayText = level == '10' ? 'high' : level == '5' ? 'medium' : 'low';
     Color backgroundColor = level == '10' 
         ? Colors.green.withOpacity(0.1)
@@ -519,21 +501,24 @@ Widget _buildMonthlyView() {
     return Row(
       children: [
         SizedBox(
-          width: 100,
+          width: isTablet ? 140 : 100,
           child: Text(
             label,
             style: TextStyle(
               color: Colors.grey[600],
-              fontSize: 14,
+              fontSize: isTablet ? 16 : 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
         Expanded(
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(
+              vertical: isTablet ? 12 : 8,
+            ),
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(isTablet ? 8 : 4),
             ),
             child: Center(
               child: Text(
@@ -541,6 +526,7 @@ Widget _buildMonthlyView() {
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.bold,
+                  fontSize: isTablet ? 16 : 14,
                 ),
               ),
             ),

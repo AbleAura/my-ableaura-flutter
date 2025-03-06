@@ -31,25 +31,36 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
   Future<void> _showMonthPicker() async {
     final currentYear = DateTime.now().year;
     int selectedYear = selectedMonth.year;
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxWidth: isTablet ? 600 : double.infinity,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(isTablet ? 28 : 20),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              height: 300,
-              padding: const EdgeInsets.all(16),
+              height: MediaQuery.of(context).size.height * (isTablet ? 0.5 : 0.4),
+              padding: EdgeInsets.all(isTablet ? 24 : 16),
               child: Column(
                 children: [
+                  // Year selector
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.chevron_left),
+                        icon: Icon(
+                          Icons.chevron_left,
+                          size: isTablet ? 32 : 24,
+                        ),
                         onPressed: selectedYear > 2020
                             ? () {
                                 setModalState(() => selectedYear--);
@@ -58,13 +69,16 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                       ),
                       Text(
                         selectedYear.toString(),
-                        style: const TextStyle(
-                          fontSize: 20,
+                        style: TextStyle(
+                          fontSize: isTablet ? 28 : 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.chevron_right),
+                        icon: Icon(
+                          Icons.chevron_right,
+                          size: isTablet ? 32 : 24,
+                        ),
                         onPressed: selectedYear < currentYear
                             ? () {
                                 setModalState(() => selectedYear++);
@@ -73,14 +87,16 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isTablet ? 24 : 16),
+                  
+                  // Month grid
                   Expanded(
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: isTablet ? 6 : 4,
                         childAspectRatio: 1.5,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
+                        mainAxisSpacing: isTablet ? 12 : 8,
+                        crossAxisSpacing: isTablet ? 12 : 8,
                       ),
                       itemCount: 12,
                       itemBuilder: (context, index) {
@@ -100,7 +116,7 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                           child: Container(
                             decoration: BoxDecoration(
                               color: isSelected ? const Color(0xFF303030) : null,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(isTablet ? 12 : 8),
                               border: Border.all(
                                 color: isSelected ? const Color(0xFF303030) : Colors.grey[300]!,
                               ),
@@ -109,6 +125,7 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                             child: Text(
                               DateFormat('MMM').format(month),
                               style: TextStyle(
+                                fontSize: isTablet ? 16 : 14,
                                 color: isSelected 
                                     ? Colors.white 
                                     : !isPastMonth
@@ -122,6 +139,32 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                       },
                     ),
                   ),
+                  
+                  // Done button for tablets
+                  if (isTablet)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF303030),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Done',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -154,24 +197,36 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Attendance History'),
+        title: Text(
+          'Attendance History',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
       ),
       body: Column(
         children: [
           // Header with student name and month selector
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 24 : 16,
+              vertical: isTablet ? 20 : 16,
+            ),
             decoration: BoxDecoration(
               color: Colors.grey[50],
               border: Border(
                 bottom: BorderSide(
                   color: Colors.grey[200]!,
-                  width: 1,
+                  width: isTablet ? 2 : 1,
                 ),
               ),
             ),
@@ -180,15 +235,27 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
               children: [
                 Text(
                   widget.studentName,
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: TextStyle(
+                    fontSize: isTablet ? 24 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 TextButton.icon(
-                  icon: const Icon(Icons.calendar_today),
+                  icon: Icon(
+                    Icons.calendar_today,
+                    size: isTablet ? 24 : 20,
+                  ),
                   label: Text(
                     DateFormat('MMMM yyyy').format(selectedMonth),
+                    style: TextStyle(
+                      fontSize: isTablet ? 18 : 16,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 16 : 12,
+                      vertical: isTablet ? 12 : 8,
+                    ),
                   ),
                   onPressed: _showMonthPicker,
                 ),
@@ -206,63 +273,89 @@ class _AttendanceViewScreenState extends State<AttendanceViewScreen> {
                           'No attendance records found',
                           style: TextStyle(
                             color: Colors.grey[600],
-                            fontSize: 16,
+                            fontSize: isTablet ? 18 : 16,
                           ),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: attendanceRecords.length,
-                        itemBuilder: (context, index) {
-                          final record = attendanceRecords[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              title: Text(
-                                record.enrollment.course.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    DateFormat('EEEE, MMMM d, y').format(record.date),
-                                  ),
-                                  if (record.enrollment.course.level != null)
-                                    Text(
-                                      'Level ${record.enrollment.course.level}',
+                    : Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet ? 800 : screenWidth,
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.all(isTablet ? 24 : 16),
+                            itemCount: attendanceRecords.length,
+                            itemBuilder: (context, index) {
+                              final record = attendanceRecords[index];
+                              return Card(
+                                margin: EdgeInsets.only(bottom: isTablet ? 16 : 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+                                ),
+                                elevation: isTablet ? 2 : 1,
+                                child: Padding(
+                                  padding: EdgeInsets.all(isTablet ? 8 : 4),
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: isTablet ? 20 : 16,
+                                      vertical: isTablet ? 8 : 4,
+                                    ),
+                                    title: Text(
+                                      record.enrollment.course.name,
                                       style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: isTablet ? 18 : 16,
                                       ),
                                     ),
-                                ],
-                              ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: record.present
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  record.present ? 'Present' : 'Absent',
-                                  style: TextStyle(
-                                    color: record.present ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.w500,
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(height: isTablet ? 6 : 4),
+                                        Text(
+                                          DateFormat('EEEE, MMMM d, y').format(record.date),
+                                          style: TextStyle(
+                                            fontSize: isTablet ? 16 : 14,
+                                          ),
+                                        ),
+                                        if (record.enrollment.course.level != null)
+                                          Padding(
+                                            padding: EdgeInsets.only(top: isTablet ? 6 : 4),
+                                            child: Text(
+                                              'Level ${record.enrollment.course.level}',
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: isTablet ? 14 : 12,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    trailing: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isTablet ? 16 : 12,
+                                        vertical: isTablet ? 8 : 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: record.present
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.red.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
+                                      ),
+                                      child: Text(
+                                        record.present ? 'Present' : 'Absent',
+                                        style: TextStyle(
+                                          color: record.present ? Colors.green : Colors.red,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: isTablet ? 16 : 14,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            },
+                          ),
+                        ),
                       ),
           ),
         ],

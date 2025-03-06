@@ -56,6 +56,7 @@ class ErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,  // Add this line
       navigatorKey: navigatorKey,
       home: Scaffold(
         body: Center(
@@ -72,6 +73,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+            debugShowCheckedModeBanner: false,  // Add this line here
       navigatorKey: navigatorKey,
       title:
           BuildConfig.isDevelopment ? 'Sports Academy Dev' : 'Sports Academy',

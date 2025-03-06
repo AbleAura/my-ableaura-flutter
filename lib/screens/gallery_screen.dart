@@ -58,67 +58,100 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gallery'),
+        title: Text(
+          'Gallery',
+          style: TextStyle(
+            fontSize: isTablet ? 24 : 20,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: isTablet ? 70 : 56,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
+              ? _buildErrorState(isTablet)
               : _galleries.isEmpty
-                  ? _buildEmptyState()
+                  ? _buildEmptyState(isTablet)
                   : RefreshIndicator(
                       onRefresh: _loadGalleries,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _galleries.length,
-                        itemBuilder: (context, index) {
-                          return _buildGalleryCard(_galleries[index]);
-                        },
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isTablet ? 800 : double.infinity,
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.all(isTablet ? 24 : 16),
+                            itemCount: _galleries.length,
+                            itemBuilder: (context, index) {
+                              return _buildGalleryCard(_galleries[index], isTablet);
+                            },
+                          ),
+                        ),
                       ),
                     ),
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(bool isTablet) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.error_outline,
-            size: 64,
+            size: isTablet ? 80 : 64,
             color: Colors.red[300],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTablet ? 24 : 16),
           Text(
             'Failed to load gallery',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isTablet ? 24 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.red[700],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            _error ?? 'Unknown error',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.red[700],
+          SizedBox(height: isTablet ? 12 : 8),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: isTablet ? 40 : 20),
+            child: Text(
+              _error ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.red[700],
+                fontSize: isTablet ? 16 : 14,
+              ),
             ),
           ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _loadGalleries,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF303030),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          SizedBox(height: isTablet ? 32 : 24),
+          SizedBox(
+            height: isTablet ? 56 : 48,
+            child: ElevatedButton.icon(
+              onPressed: _loadGalleries,
+              icon: Icon(
+                Icons.refresh,
+                size: isTablet ? 24 : 20,
+              ),
+              label: Text(
+                'Retry',
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 14,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF303030),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isTablet ? 32 : 24, 
+                  vertical: isTablet ? 16 : 12,
+                ),
+              ),
             ),
           ),
         ],
@@ -126,30 +159,31 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isTablet) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.photo_library_outlined,
-            size: 64,
+            size: isTablet ? 80 : 64,
             color: Colors.grey[400],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTablet ? 24 : 16),
           Text(
             'No gallery images found',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isTablet ? 24 : 18,
               fontWeight: FontWeight.bold,
               color: Colors.grey[700],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isTablet ? 12 : 8),
           Text(
             'Check back later for updates',
             style: TextStyle(
               color: Colors.grey[600],
+              fontSize: isTablet ? 18 : 14,
             ),
           ),
         ],
@@ -157,7 +191,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  Widget _buildGalleryCard(FranchiseGallery gallery) {
+  Widget _buildGalleryCard(FranchiseGallery gallery, bool isTablet) {
     // Format date for display
     String formattedDate = '';
     try {
@@ -168,50 +202,50 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 20),
-      elevation: 2,
+      margin: EdgeInsets.only(bottom: isTablet ? 28 : 20),
+      elevation: isTablet ? 2 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isTablet ? 24 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   gallery.title,
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: isTablet ? 22 : 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isTablet ? 6 : 4),
                 Text(
                   gallery.franchiseName,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: isTablet ? 16 : 14,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isTablet ? 6 : 4),
                 Text(
                   formattedDate,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: isTablet ? 14 : 12,
                     color: Colors.grey[500],
                   ),
                 ),
                 if (gallery.description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: isTablet ? 12 : 8),
                   Text(
                     gallery.description,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: isTablet ? 16 : 14,
                       color: Colors.grey[700],
                     ),
                   ),
@@ -221,15 +255,20 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
 
           // Image grid
-          _buildImageGrid(gallery.images, context),
+          _buildImageGrid(gallery.images, context, isTablet),
 
           // Footer
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: EdgeInsets.fromLTRB(
+              isTablet ? 24 : 16, 
+              isTablet ? 12 : 8, 
+              isTablet ? 24 : 16, 
+              isTablet ? 24 : 16
+            ),
             child: Text(
               '${gallery.images.length} photos',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: isTablet ? 14 : 12,
                 color: Colors.grey[600],
               ),
             ),
@@ -239,24 +278,33 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  Widget _buildImageGrid(List<GalleryImage> images, BuildContext context) {
-    // Limit preview to 4 images, with a "View All" overlay if more
-    final displayImages = images.length > 4 ? images.sublist(0, 4) : images;
-    final hasMore = images.length > 4;
-    final moreCount = images.length - 4;
+  Widget _buildImageGrid(List<GalleryImage> images, BuildContext context, bool isTablet) {
+    // For tablets in landscape, use 4 columns instead of 2
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+    final crossAxisCount = isTablet && isLandscape ? 4 : 2;
+    
+    // Adjust the number of preview images based on grid columns
+    final maxPreviewImages = isTablet && isLandscape ? 8 : 4;
+    final displayImages = images.length > maxPreviewImages 
+        ? images.sublist(0, maxPreviewImages) 
+        : images;
+    final hasMore = images.length > maxPreviewImages;
+    final moreCount = images.length - maxPreviewImages;
+    final lastDisplayIndex = displayImages.length - 1;
 
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
-      mainAxisSpacing: 2,
-      crossAxisSpacing: 2,
+      mainAxisSpacing: isTablet ? 4 : 2,
+      crossAxisSpacing: isTablet ? 4 : 2,
       children: [
         ...displayImages.asMap().entries.map((entry) {
           final index = entry.key;
           final image = entry.value;
-          bool showMoreOverlay = hasMore && index == 3;
+          bool showMoreOverlay = hasMore && index == lastDisplayIndex;
 
           return GestureDetector(
             onTap: () {
@@ -308,10 +356,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     child: Center(
                       child: Text(
                         '+$moreCount more',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: isTablet ? 18 : 16,
                         ),
                       ),
                     ),
@@ -444,30 +492,38 @@ class _FullScreenGalleryState extends State<FullScreenGallery> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        toolbarHeight: isTablet ? 70 : 56,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.galleryTitle,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: isTablet ? 20 : 16),
             ),
             Text(
               '${_currentIndex + 1} of ${widget.images.length}',
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: isTablet ? 16 : 12),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
+            icon: Icon(
+              Icons.share,
+              size: isTablet ? 28 : 24,
+            ),
             onPressed: () {
               // Implement share functionality
             },
+            iconSize: isTablet ? 28 : 24,
+            padding: EdgeInsets.all(isTablet ? 12 : 8),
           ),
         ],
       ),
@@ -494,15 +550,18 @@ class _FullScreenGalleryState extends State<FullScreenGallery> {
               errorWidget: (context, url, error) => Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     color: Colors.red,
-                    size: 60,
+                    size: isTablet ? 80 : 60,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isTablet ? 24 : 16),
                   Text(
                     'Failed to load image',
-                    style: TextStyle(color: Colors.red[300]),
+                    style: TextStyle(
+                      color: Colors.red[300],
+                      fontSize: isTablet ? 18 : 14,
+                    ),
                   ),
                 ],
               ),
@@ -512,7 +571,7 @@ class _FullScreenGalleryState extends State<FullScreenGallery> {
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.black,
-        height: 80,
+        height: isTablet ? 100 : 80,
         child: SafeArea(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -522,15 +581,24 @@ class _FullScreenGalleryState extends State<FullScreenGallery> {
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
                     child: Row(
                       children: widget.images[_currentIndex].categories.map((category) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                          padding: EdgeInsets.only(right: isTablet ? 12 : 8),
                           child: Chip(
-                            label: Text(category),
+                            label: Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: isTablet ? 14 : 12,
+                              ),
+                            ),
                             backgroundColor: Colors.grey[800],
                             labelStyle: const TextStyle(color: Colors.white),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 12 : 8,
+                              vertical: isTablet ? 4 : 2,
+                            ),
                           ),
                         );
                       }).toList(),
@@ -539,26 +607,37 @@ class _FullScreenGalleryState extends State<FullScreenGallery> {
                 ),
               
               // Download button
-              ElevatedButton.icon(
-                onPressed: _isDownloading ? null : _downloadImage,
-                icon: _isDownloading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.black,
-                          strokeWidth: 2,
+              SizedBox(
+                height: isTablet ? 56 : 48,
+                child: ElevatedButton.icon(
+                  onPressed: _isDownloading ? null : _downloadImage,
+                  icon: _isDownloading
+                      ? SizedBox(
+                          width: isTablet ? 20 : 16,
+                          height: isTablet ? 20 : 16,
+                          child: const CircularProgressIndicator(
+                            color: Colors.black,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Icon(
+                          Icons.download,
+                          size: isTablet ? 24 : 20,
                         ),
-                      )
-                    : const Icon(Icons.download),
-                label: Text(_isDownloading ? 'Downloading...' : 'Download'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  disabledBackgroundColor: Colors.grey,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
+                  label: Text(
+                    _isDownloading ? 'Downloading...' : 'Download',
+                    style: TextStyle(
+                      fontSize: isTablet ? 18 : 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    disabledBackgroundColor: Colors.grey,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 28 : 20,
+                      vertical: isTablet ? 16 : 12,
+                    ),
                   ),
                 ),
               ),
